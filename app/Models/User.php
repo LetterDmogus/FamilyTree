@@ -49,6 +49,14 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    public function scopeSearch($query, $search)
+    {
+        return $query->where(function ($query) use ($search) {
+            $query->where('name', 'like', '%'.$search.'%')
+                ->orWhere('email', 'like', '%'.$search.'%');
+        });
+    }
+
     /**
      * Get the attributes that should be cast.
      *

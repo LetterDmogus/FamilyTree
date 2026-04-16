@@ -75,11 +75,13 @@ const handleEdit = (item: any) => {
 
 const submit = () => {
     if (editingItem.value) {
-        form.put(admin.socialMedias.update({ socialMedia: editingItem.value.id }), {
+        const routeDef = admin.socialMedias.update({ socialMedia: editingItem.value.id });
+        form.put(typeof routeDef === 'string' ? routeDef : routeDef.url, {
             onSuccess: () => (showModal.value = false),
         });
     } else {
-        form.post(admin.socialMedias.store(), {
+        const routeDef = admin.socialMedias.store();
+        form.post(typeof routeDef === 'string' ? routeDef : routeDef.url, {
             onSuccess: () => (showModal.value = false),
         });
     }

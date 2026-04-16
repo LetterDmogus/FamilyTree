@@ -77,11 +77,13 @@ const handleEdit = (item: any) => {
 
 const submit = () => {
     if (editingItem.value) {
-        form.put(admin.dataDetails.update({ dataDetail: editingItem.value.id }), {
+        const routeDef = admin.dataDetails.update({ dataDetail: editingItem.value.id });
+        form.put(typeof routeDef === 'string' ? routeDef : routeDef.url, {
             onSuccess: () => (showModal.value = false),
         });
     } else {
-        form.post(admin.dataDetails.store(), {
+        const routeDef = admin.dataDetails.store();
+        form.post(typeof routeDef === 'string' ? routeDef : routeDef.url, {
             onSuccess: () => (showModal.value = false),
         });
     }

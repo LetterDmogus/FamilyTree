@@ -11,6 +11,11 @@ class MasterAdditionalField extends Model
 
     protected $fillable = ['name', 'icon_key', 'input_type', 'options'];
 
+    public function scopeSearch($query, $search)
+    {
+        return $query->where('name', 'like', '%'.$search.'%');
+    }
+
     protected function casts(): array
     {
         return [

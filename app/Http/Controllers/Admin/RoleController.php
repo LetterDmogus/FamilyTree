@@ -14,9 +14,16 @@ class RoleController extends Controller
 {
     public function index()
     {
+        request()->merge([
+            'filter' => array_merge(request()->get('filter', []), [
+                'search' => request()->get('search'),
+                'trashed' => request()->get('trashed'),
+            ]),
+        ]);
+
         $roles = QueryBuilder::for(Role::with('permissions'))
             ->allowedFilters(
-                'name',
+                AllowedFilter::scope('search'),
                 AllowedFilter::trashed(),
             )
             ->allowedSorts('name', 'created_at')

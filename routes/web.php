@@ -28,6 +28,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::middleware('can:manage_users')->group(function () {
         Route::get('admin/users', [UserController::class, 'index'])->name('admin.users.index');
+        Route::put('admin/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
+        Route::put('admin/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('admin.users.reset-password');
         Route::delete('admin/users/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
         Route::put('admin/users/{user}/restore', [UserController::class, 'restore'])->name('admin.users.restore');
         Route::delete('admin/users/{user}/force', [UserController::class, 'forceDestroy'])->name('admin.users.force-destroy');

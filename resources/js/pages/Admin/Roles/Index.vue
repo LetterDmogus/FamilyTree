@@ -67,28 +67,26 @@ const openCreateModal = () => {
 
 const handleEdit = (role: any) => {
     editingRole.value = role;
+    form.clearErrors();
     form.name = role.name;
-    form.permissions = role.permissions?.map((p: any) => p.name) || [];
+    // Map to array of names, ensuring we handle potentially missing permissions relationship
+    form.permissions = Array.isArray(role.permissions) 
+        ? role.permissions.map((p: any) => p.name) 
+        : [];
     showModal.value = true;
 };
 
 const submit = () => {
     if (editingRole.value) {
-        form.put(admin.roles.update({ role: editingRole.value.id }), {
+        const routeDef = admin.roles.update({ role: editingRole.value.id });
+        form.put(typeof routeDef === 'string' ? routeDef : routeDef.url, {
             onSuccess: () => (showModal.value = false),
         });
     } else {
-        form.post(admin.roles.store(), {
+        const routeDef = admin.roles.store();
+        form.post(typeof routeDef === 'string' ? routeDef : routeDef.url, {
             onSuccess: () => (showModal.value = false),
         });
-    }
-};
-
-const togglePermission = (name: string) => {
-    if (form.permissions.includes(name)) {
-        form.permissions = form.permissions.filter(p => p !== name);
-    } else {
-        form.permissions.push(name);
     }
 };
 </script>
@@ -137,17 +135,25 @@ const togglePermission = (name: string) => {
                     <Input id="name" v-model="form.name" />
                 </div>
                 <div class="grid gap-2">
-                    <Label>Permissions</Label>
-                    <div class="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto pr-2">
+                    <Label>Permissions ({{ form.permissions.length }} selected)</Label>
+                    <div :key="editingRole?.id || 'new'" class="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto pr-2">
                         <div v-for="permission in allPermissions" :key="permission.id" class="flex items-center space-x-2">
                             <Checkbox
                                 :id="'perm-' + permission.id"
                                 :checked="form.permissions.includes(permission.name)"
-                                @update:checked="togglePermission(permission.name)"
+                                @update:checked="(val) => {
+                                    if (val) {
+                                        if (!form.permissions.includes(permission.name)) {
+                                            form.permissions.push(permission.name);
+                                        }
+                                    } else {
+                                        form.permissions = form.permissions.filter(p => p !== permission.name);
+                                    }
+                                }"
                             />
                             <label
                                 :for="'perm-' + permission.id"
-                                class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                             >
                                 {{ permission.name }}
                             </label>

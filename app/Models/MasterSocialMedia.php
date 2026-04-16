@@ -12,4 +12,9 @@ class MasterSocialMedia extends Model
     protected $table = 'master_social_medias';
 
     protected $fillable = ['name', 'prefix', 'icon_url'];
+
+    public function scopeSearch($query, $search)
+    {
+        return $query->where('name', 'like', '%'.$search.'%');
+    }
 }
