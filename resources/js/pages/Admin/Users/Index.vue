@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
 import CrudTable from '@/components/CrudTable.vue';
-import { BreadcrumbItem } from '@/types';
 import admin from '@/routes/admin';
 import { ref } from 'vue';
 import {
@@ -16,6 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Crown, Heart, Skull, Venus, Mars } from 'lucide-vue-next';
 
 const props = defineProps<{
     items: {
@@ -39,10 +40,10 @@ defineOptions({
 });
 
 const columns = [
-    { label: 'Name', key: 'name', sortable: true },
-    { label: 'Email', key: 'email', sortable: true },
+    { label: 'Identitas Anggota', key: 'identity' },
+    { label: 'Status & Gender', key: 'status' },
     { label: 'Role', key: 'role_name' },
-    { label: 'Joined', key: 'created_at', sortable: true },
+    { label: 'Tanggal Bergabung', key: 'created_at', sortable: true },
 ];
 
 const routes = {
@@ -77,20 +78,26 @@ const submit = () => {
 };
 
 const handleResetPassword = (user: any) => {
-    if (confirm(`Are you sure you want to reset password for ${user.name}?`)) {
+    if (confirm(`Apakah Anda yakin ingin mereset password untuk ${user.name}? Password default akan menjadi "password".`)) {
         const routeDef = admin.users.resetPassword({ user: user.id });
         useForm({}).put(typeof routeDef === 'string' ? routeDef : routeDef.url);
     }
 };
+
+function getRoleColor(role: string) {
+    if (role === 'superadmin') return 'bg-rose-600 text-white border-none'
+    if (role === 'admin') return 'bg-indigo-600 text-white border-none'
+    return 'bg-slate-100 text-slate-600 border-none'
+}
 </script>
 
 <template>
-    <Head title="User Management" />
+    <Head title="Manajemen User" />
 
-    <div class="flex h-full flex-1 flex-col gap-4 overflow-x-auto p-4 md:p-8">
+    <div class="flex h-full flex-1 flex-col gap-4 p-4 md:p-8 select-none font-sans">
         <CrudTable
-            title="User Management"
-            description="Manage all registered users and their account status."
+            title="Manajemen Anggota"
+            description="Kelola akun pengguna, hak akses, dan pantau status profil anggota silsilah."
             :items="items"
             :columns="columns"
             :filters="filters"
@@ -99,50 +106,92 @@ const handleResetPassword = (user: any) => {
             @edit="handleEdit"
             @reset-password="handleResetPassword"
         >
+            <!-- Slot: Identity -->
+            <template #cell(identity)="{ item }">
+                <div class="flex items-center gap-4 py-1">
+                    <div class="relative flex-shrink-0">
+                        <img 
+                            :src="item.profile?.photo_url || `https://ui-avatars.com/api/?name=${item.name}&background=f1f5f9&color=64748b`" 
+                            class="w-12 h-12 rounded-2xl object-cover border-2 border-white shadow-sm"
+                        />
+                        <div v-if="item.profile?.is_family_head" class="absolute -top-1 -left-1 w-5 h-5 bg-amber-500 text-white rounded-full flex items-center justify-center text-[8px] border-2 border-white shadow-sm" title="Kepala Keluarga">
+                            <Crown class="w-2.5 h-2.5 fill-current" />
+                        </div>
+                    </div>
+                    <div class="flex flex-col min-w-0">
+                        <span class="font-black text-gray-900 leading-tight truncate tracking-tight text-sm">{{ item.profile?.full_name || item.name }}</span>
+                        <span class="text-[10px] text-gray-400 font-bold tracking-widest mt-0.5 truncate">{{ item.email }}</span>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Slot: Status & Gender -->
+            <template #cell(status)="{ item }">
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex items-center gap-2">
+                        <Badge :class="item.profile?.is_alive ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-100 text-slate-500 border-slate-200'" class="text-[9px] font-black uppercase px-2 py-0.5 rounded-md border shadow-none flex items-center gap-1">
+                            <Heart v-if="item.profile?.is_alive" class="w-2.5 h-2.5 fill-current" />
+                            <Skull v-else class="w-2.5 h-2.5" />
+                            {{ item.profile?.is_alive ? 'Hidup' : 'Wafat' }}
+                        </Badge>
+                        <Badge :class="item.profile?.gender === 'F' ? 'bg-pink-50 text-pink-500 border-pink-100' : 'bg-blue-50 text-blue-500 border-blue-100'" class="text-[9px] font-black uppercase px-2 py-0.5 rounded-md border shadow-none flex items-center gap-1">
+                            <component :is="item.profile?.gender === 'F' ? Venus : Mars" class="w-2.5 h-2.5 stroke-[3]" />
+                            {{ item.profile?.gender === 'F' ? 'P' : 'L' }}
+                        </Badge>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Slot: Role -->
             <template #cell(role_name)="{ item }">
-                <span class="capitalize">{{ item.roles?.[0]?.name || 'member' }}</span>
+                <Badge :class="getRoleColor(item.roles?.[0]?.name || 'member')" class="text-[9px] font-black uppercase px-3 py-1 rounded-lg tracking-widest">
+                    {{ item.roles?.[0]?.name || 'member' }}
+                </Badge>
             </template>
 
             <template #cell(created_at)="{ item }">
-                {{ new Date(item.created_at).toLocaleDateString() }}
+                <div class="flex flex-col">
+                    <span class="text-xs font-bold text-gray-700">{{ new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) }}</span>
+                    <span class="text-[9px] text-gray-400 font-medium uppercase tracking-tighter">{{ new Date(item.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) }} WIB</span>
+                </div>
             </template>
         </CrudTable>
     </div>
 
     <Dialog v-model:open="showModal">
-        <DialogContent class="sm:max-w-[425px]">
+        <DialogContent class="sm:max-w-[450px] rounded-[2rem] p-8">
             <DialogHeader>
-                <DialogTitle>Edit User</DialogTitle>
-                <DialogDescription>
-                    Update user account details and role.
+                <DialogTitle class="text-2xl font-black tracking-tighter text-gray-900">Edit Akun & Akses</DialogTitle>
+                <DialogDescription class="text-xs font-bold uppercase text-gray-400 tracking-widest mt-1">
+                    Sesuaikan informasi login dan peran pengguna.
                 </DialogDescription>
             </DialogHeader>
-            <div class="grid gap-4 py-4">
+            <div class="grid gap-6 py-6 text-left">
                 <div class="grid gap-2">
-                    <Label for="name">Name</Label>
-                    <Input id="name" v-model="form.name" />
+                    <Label for="name" class="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">Nama Akun</Label>
+                    <Input id="name" v-model="form.name" class="rounded-xl border-gray-100 bg-gray-50 font-bold focus:bg-white transition-all py-6" />
                 </div>
                 <div class="grid gap-2">
-                    <Label for="email">Email</Label>
-                    <Input id="email" type="email" v-model="form.email" />
+                    <Label for="email" class="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">Alamat Email</Label>
+                    <Input id="email" type="email" v-model="form.email" class="rounded-xl border-gray-100 bg-gray-50 font-bold focus:bg-white transition-all py-6" />
                 </div>
                 <div class="grid gap-2">
-                    <Label for="role">Role</Label>
+                    <Label for="role" class="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">Hak Akses (Role)</Label>
                     <Select v-model="form.role">
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select role" />
+                        <SelectTrigger class="rounded-xl border-gray-100 bg-gray-50 font-bold h-12">
+                            <SelectValue placeholder="Pilih Role" />
                         </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem v-for="role in roles" :key="role.id" :value="role.name">
-                                <span class="capitalize">{{ role.name }}</span>
+                        <SelectContent class="rounded-xl">
+                            <SelectItem v-for="role in roles" :key="role.id" :value="role.name" class="rounded-lg">
+                                <span class="capitalize font-bold">{{ role.name }}</span>
                             </SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
             </div>
             <DialogFooter>
-                <Button type="submit" @click="submit" :disabled="form.processing">
-                    Update User
+                <Button type="submit" @click="submit" :disabled="form.processing" class="w-full py-6 bg-gray-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-blue-600 transition-all shadow-xl shadow-gray-100">
+                    Simpan Perubahan
                 </Button>
             </DialogFooter>
         </DialogContent>

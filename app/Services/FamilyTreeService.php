@@ -22,8 +22,7 @@ class FamilyTreeService
         $cacheKey = "family_tree_{$rootUser->id}_{$viewingUser->id}_depth_{$maxDepth}";
 
         return \Illuminate\Support\Facades\Cache::remember($cacheKey, 3600, function () use ($rootUser, $viewingUser, $maxDepth) {
-            // Optimization: Fetch the entire family cluster in 3 bulk queries
-            $this->allUsers = User::all();
+            $this->allUsers = User::with('roles')->get();
             $this->allProfiles = UserProfile::all();
             $this->allRelations = Relation::all();
 
@@ -33,16 +32,21 @@ class FamilyTreeService
 
     private function buildNode(User $user, User $viewingUser, int $currentDepth, int $maxDepth): array
     {
-        // Use in-memory collections instead of DB queries
         $profile = $this->allProfiles->where('user_id', $user->id)->first();
+        $isAdmin = $user->roles->whereIn('name', ['admin', 'superadmin'])->isNotEmpty();
         
         $node = [
-            'id'        => (int) $user->id,
-            'panggilan' => $this->calculator->calculate($viewingUser, $user, $this->allRelations),
-            'full_name' => $profile->full_name ?? $user->name,
-            'photo_url' => $profile->photo_url ?? null,
-            'gender'    => $profile->gender ?? 'M',
-            'depth'     => $currentDepth,
+            'id'          => (int) $user->id,
+            'panggilan'   => $this->calculator->calculate($viewingUser, $user, $this->allRelations),
+            'full_name'   => $profile->full_name ?? $user->name,
+            'photo_url'   => $profile->photo_url ?? null,
+            'gender'      => $profile->gender ?? 'M',
+            'is_alive'    => $profile->is_alive ?? true,
+            'birth_date'  => $profile->birth_date ? $profile->birth_date->format('Y-m-d') : null,
+            'death_date'  => $profile->death_date ? $profile->death_date->format('Y-m-d') : null,
+            'pekerjaan'   => $profile->additional_info['pekerjaan'] ?? null,
+            'is_admin'    => $isAdmin,
+            'depth'       => $currentDepth,
             'spouse'      => [],
             'children'    => [],
         ];
@@ -51,23 +55,28 @@ class FamilyTreeService
             return $node;
         }
 
-        // Load spouse from memory
         $spouseRelations = $this->allRelations->where('user_id', $user->id)->where('type', 'spouse');
         foreach ($spouseRelations as $rel) {
             $spouse = $this->allUsers->find($rel->related_user_id);
             if (!$spouse) continue;
 
             $sProfile = $this->allProfiles->where('user_id', $spouse->id)->first();
+            $sIsAdmin = $spouse->roles->whereIn('name', ['admin', 'superadmin'])->isNotEmpty();
+
             $node['spouse'][] = [
-                'id'        => (int) $spouse->id,
-                'panggilan' => $this->calculator->calculate($viewingUser, $spouse, $this->allRelations),
-                'full_name' => $sProfile->full_name ?? $spouse->name,
-                'photo_url' => $sProfile->photo_url ?? null,
+                'id'          => (int) $spouse->id,
+                'panggilan'   => $this->calculator->calculate($viewingUser, $spouse, $this->allRelations),
+                'full_name'   => $sProfile->full_name ?? $spouse->name,
+                'photo_url'   => $sProfile->photo_url ?? null,
                 'gender'    => $sProfile->gender ?? 'M',
+                'is_alive'  => $sProfile->is_alive ?? true,
+                'birth_date'=> $sProfile->birth_date ? $sProfile->birth_date->format('Y-m-d') : null,
+                'death_date'=> $sProfile->death_date ? $sProfile->death_date->format('Y-m-d') : null,
+                'pekerjaan' => $sProfile->additional_info['pekerjaan'] ?? null,
+                'is_admin'  => $sIsAdmin,
             ];
         }
 
-        // Load children from memory (recursive)
         $childRelations = $this->allRelations->where('user_id', $user->id)->where('type', 'child');
         foreach ($childRelations as $rel) {
             $child = $this->allUsers->find($rel->related_user_id);

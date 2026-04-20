@@ -59,7 +59,7 @@ function getNodeClasses(personNode) {
   <div class="flex flex-col items-center text-gray-900">
 
     <!-- 1. PARENT & SPOUSE ROW -->
-    <div class="grid grid-cols-[1fr_auto_1fr] items-start w-full">
+    <div class="relative grid grid-cols-[1fr_auto_1fr] items-start w-full">
 
       <!-- LEFT COLUMN: Dynamic Spacer -->
       <div :class="['flex justify-end pr-4 h-full', node.depth > 1 ? 'pt-8' : 'pt-0']">
@@ -90,10 +90,9 @@ function getNodeClasses(personNode) {
             ME
           </div>
         </div>
-
+        
         <!-- SINGLE PARENT STEM: Only if NO spouse -->
-        <div v-if="(!node.spouse || node.spouse.length === 0) && node.children && node.children.length > 0" class="w-[2px] h-8 bg-slate-800"></div>
-        <div v-else class="w-[5px] h-8"></div>
+        <div v-if=" node.children && node.children.length > 0" class="w-[2px] h-8 bg-slate-800"></div>
       </div>
 
       <!-- RIGHT COLUMN: SPOUSES -->
@@ -104,8 +103,7 @@ function getNodeClasses(personNode) {
             <div class="w-8 h-[2px] bg-slate-800 relative">
               <div class="absolute -top-[4px] left-1/2 -translate-x-1/2 w-[10px] h-[10px] rounded-full border-2 border-slate-800 bg-white z-10">
                 <!-- STEM DOWN from Junction -->
-                <div v-if="node.children && node.children.length > 0"
-                     class="absolute top-[8px] left-1/2 -translate-x-1/2 w-[2px] h-21 bg-slate-800"></div>
+
               </div>
             </div>
 

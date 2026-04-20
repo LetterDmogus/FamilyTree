@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class UserProfile extends Model
 {
@@ -10,35 +12,36 @@ class UserProfile extends Model
         'user_id',
         'full_name',
         'gender',
+        'is_alive',
+        'death_date',
         'birth_date',
         'birth_place',
         'is_family_head',
-        'social_media',
         'additional_info',
+        'social_media',
         'profile_photo_path',
+    ];
+
+    protected $casts = [
+        'is_alive' => 'boolean',
+        'death_date' => 'date',
+        'birth_date' => 'date',
+        'is_family_head' => 'boolean',
+        'additional_info' => 'array',
+        'social_media' => 'array',
     ];
 
     protected $appends = ['photo_url'];
 
-    protected function casts(): array
-    {
-        return [
-            'birth_date' => 'date',
-            'is_family_head' => 'boolean',
-            'social_media' => 'array',
-            'additional_info' => 'array',
-        ];
-    }
-
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function getPhotoUrlAttribute()
+    public function getPhotoUrlAttribute(): ?string
     {
-        return $this->profile_photo_path
-            ? asset('storage/'.$this->profile_photo_path)
-            : 'https://ui-avatars.com/api/?name='.urlencode($this->full_name).'&color=7F9CF5&background=EBF4FF';
+        return $this->profile_photo_path 
+            ? Storage::disk('public')->url($this->profile_photo_path) 
+            : null;
     }
 }

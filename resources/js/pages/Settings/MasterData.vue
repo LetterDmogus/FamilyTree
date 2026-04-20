@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
 
 const props = defineProps({
@@ -8,6 +8,14 @@ const props = defineProps({
 })
 
 const activeTab = ref('sosmed')
+
+onMounted(() => {
+  const urlParams = new URLSearchParams(window.location.search)
+  const tab = urlParams.get('tab')
+  if (tab && ['sosmed', 'fields'].includes(tab)) {
+    activeTab.value = tab
+  }
+})
 
 // Social Media Form
 const smForm = useForm({

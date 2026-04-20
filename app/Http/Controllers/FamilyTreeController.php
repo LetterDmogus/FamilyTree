@@ -12,6 +12,7 @@ use App\Services\RelationshipCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
+use Spatie\Permission\Models\Role;
 
 class FamilyTreeController extends Controller
 {
@@ -41,19 +42,16 @@ class FamilyTreeController extends Controller
 
     private function findVisualRoot(User $user): User
     {
-        // 1. If user has no biological parents, check if they have a spouse
         $parentId = Relation::where('related_user_id', $user->id)
             ->where('type', 'child')
             ->value('user_id');
         
         if (!$parentId) {
-            // Check for spouse
             $spouseId = Relation::where('user_id', $user->id)
                 ->where('type', 'spouse')
                 ->value('related_user_id');
             
             if ($spouseId) {
-                // If spouse found, try to find the root of the spouse instead
                 return $this->findVisualRoot(User::find($spouseId));
             }
 
@@ -62,7 +60,6 @@ class FamilyTreeController extends Controller
 
         $parent = User::find($parentId);
 
-        // 2. Try to find Grandfather/Grandmother (Look up another level)
         $grandParentId = Relation::where('related_user_id', $parent->id)
             ->where('type', 'child')
             ->value('user_id');
@@ -74,33 +71,26 @@ class FamilyTreeController extends Controller
         return User::find($grandParentId) ?? $parent;
     }
 
-    public function search(Request $request)
-    {
-        $query = $request->input('query');
-        
-        $users = User::with('profile')
-            ->where('name', 'like', "%{$query}%")
-            ->orWhereHas('profile', function($q) use ($query) {
-                $q->where('full_name', 'like', "%{$query}%");
-            })
-            ->limit(10)
-            ->get()
-            ->map(fn($u) => [
-                'id' => $u->id,
-                'name' => $u->profile->full_name ?? $u->name,
-                'email' => $u->email,
-            ]);
-
-        return response()->json($users);
-    }
-
     public function details(User $user, Request $request)
     {
         $fromId = $request->input('from_id', auth()->id());
         $fromUser = User::find($fromId) ?? auth()->user();
         
-        $user->load('profile');
+        $user->load(['profile', 'roles']);
         $relationLabel = $this->calculator->calculate($fromUser, $user);
+
+        // Enhance social media data with prefixes
+        $profile = $user->profile;
+        if ($profile && !empty($profile->social_media)) {
+            $platforms = MasterSocialMedia::all();
+            $enhancedSocial = array_map(function($sm) use ($platforms) {
+                $platform = $platforms->firstWhere('name', $sm['platform_name']);
+                return array_merge($sm, [
+                    'prefix' => $platform ? $platform->prefix : ''
+                ]);
+            }, $profile->social_media);
+            $profile->social_media = $enhancedSocial;
+        }
 
         return response()->json([
             'id' => $user->id,
@@ -108,7 +98,8 @@ class FamilyTreeController extends Controller
             'full_name' => $user->profile->full_name ?? $user->name,
             'email' => $user->email,
             'relation_label' => $relationLabel,
-            'profile' => $user->profile,
+            'profile' => $profile,
+            'is_admin' => $user->hasRole(['admin', 'superadmin']),
         ]);
     }
 
@@ -116,18 +107,20 @@ class FamilyTreeController extends Controller
     {
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
-            'type' => 'required|in:child,spouse',
+            'type' => 'required|in:child,spouse,parent',
             'full_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'gender' => 'required|in:M,F',
             'birth_date' => 'required|date',
             'birth_place' => 'required|string|max:255',
             'profile_photo' => 'nullable|image|max:2048',
+            'is_alive' => 'boolean',
+            'death_date' => 'nullable|date',
             'additional_info' => 'nullable|array',
             'social_media' => 'nullable|array',
         ]);
 
-        $userId = $validated['user_id'];
+        $targetUserId = $validated['user_id'];
 
         $user = User::create([
             'name' => explode(' ', $validated['full_name'])[0],
@@ -146,26 +139,31 @@ class FamilyTreeController extends Controller
             'gender' => $validated['gender'],
             'birth_date' => $validated['birth_date'],
             'birth_place' => $validated['birth_place'],
+            'is_alive' => $validated['is_alive'] ?? true,
+            'death_date' => $validated['death_date'] ?? null,
             'profile_photo_path' => $photoPath,
             'additional_info' => $validated['additional_info'] ?? [],
             'social_media' => $validated['social_media'] ?? [],
         ]);
 
-        $isBlood = ($validated['type'] === 'child');
-        
-        Relation::create([
-            'user_id' => $userId,
-            'related_user_id' => $user->id,
-            'type' => $validated['type'],
-            'is_blood' => $isBlood,
-        ]);
+        $user->assignRole('member');
 
-        if ($validated['type'] === 'spouse') {
-            Relation::firstOrCreate([
+        if ($validated['type'] === 'child') {
+            Relation::create([
+                'user_id' => $targetUserId,
+                'related_user_id' => $user->id,
+                'type' => 'child',
+                'is_blood' => true,
+            ]);
+        } elseif ($validated['type'] === 'spouse') {
+            Relation::create(['user_id' => $targetUserId, 'related_user_id' => $user->id, 'type' => 'spouse', 'is_blood' => false]);
+            Relation::create(['user_id' => $user->id, 'related_user_id' => $targetUserId, 'type' => 'spouse', 'is_blood' => false]);
+        } elseif ($validated['type'] === 'parent') {
+            Relation::create([
                 'user_id' => $user->id,
-                'related_user_id' => $userId,
-                'type' => 'spouse',
-                'is_blood' => false,
+                'related_user_id' => $targetUserId,
+                'type' => 'child',
+                'is_blood' => true,
             ]);
         }
 
@@ -182,6 +180,8 @@ class FamilyTreeController extends Controller
             'gender' => 'required|in:M,F',
             'birth_date' => 'required|date',
             'birth_place' => 'required|string|max:255',
+            'is_alive' => 'boolean',
+            'death_date' => 'nullable|date',
             'profile_photo' => 'nullable|image|max:2048',
             'additional_info' => 'nullable|array',
             'social_media' => 'nullable|array',
@@ -197,6 +197,8 @@ class FamilyTreeController extends Controller
             'gender' => $validated['gender'],
             'birth_date' => $validated['birth_date'],
             'birth_place' => $validated['birth_place'],
+            'is_alive' => $validated['is_alive'] ?? true,
+            'death_date' => $validated['death_date'] ?? null,
             'additional_info' => $validated['additional_info'] ?? [],
             'social_media' => $validated['social_media'] ?? [],
         ];
@@ -212,16 +214,33 @@ class FamilyTreeController extends Controller
         return back()->with('success', 'Profil berhasil diperbarui.');
     }
 
+    public function toggleAdmin(User $user)
+    {
+        // Only superadmin or admin can promote others
+        if (!auth()->user()->hasRole(['admin', 'superadmin'])) {
+            return back()->withErrors(['error' => 'Anda tidak memiliki izin.']);
+        }
+
+        if ($user->hasRole('admin')) {
+            $user->removeRole('admin');
+            $message = 'Hak akses admin dicabut.';
+        } else {
+            $user->assignRole('admin');
+            $message = 'Anggota berhasil dipromosikan menjadi admin.';
+        }
+
+        $this->clearTreeCache();
+
+        return back()->with('success', $message);
+    }
+
     public function destroyMember(User $user)
     {
-        // Only allow if not family head
         if ($user->profile->is_family_head) {
             return back()->withErrors(['error' => 'Kepala keluarga tidak dapat dihapus.']);
         }
 
-        // Delete user (cascade will handle profile and relations)
         $user->delete();
-
         $this->clearTreeCache();
 
         return back()->with('success', 'Anggota keluarga berhasil dihapus.');
