@@ -21,19 +21,19 @@ class UserController extends Controller
             ]),
         ]);
 
-        $users = QueryBuilder::for(User::with('roles'))
+        $users = QueryBuilder::for(User::with(['roles', 'profile']))
             ->allowedFilters(
                 AllowedFilter::scope('search'),
                 AllowedFilter::trashed(),
             )
             ->allowedSorts('name', 'email', 'created_at')
-            ->defaultSort('name')
-            ->paginate(10)
+            ->defaultSort('-created_at')
+            ->paginate(request('per_page', 10))
             ->withQueryString();
 
         return Inertia::render('Admin/Users/Index', [
             'items' => $users,
-            'filters' => request()->all(['search', 'trashed', 'sort']),
+            'filters' => request()->all(['search', 'trashed', 'sort', 'per_page']),
             'roles' => Role::all(),
         ]);
     }

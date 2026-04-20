@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useForm } from '@inertiajs/vue3'
-import { storeRelation, updateProfile } from '@/actions/App/Http/Controllers/FamilyTreeController'
 
 const props = defineProps({
   mode: {
@@ -45,6 +44,8 @@ const form = useForm({
   full_name: '',
   email: '',
   gender: 'M',
+  is_alive: true,
+  death_date: '',
   birth_date: '',
   birth_place: '',
   profile_photo: null,
@@ -57,9 +58,11 @@ onMounted(() => {
     form.full_name = props.member.full_name || ''
     form.email = props.member.email || ''
     form.gender = props.member.profile?.gender || 'M'
+    form.is_alive = props.member.profile?.is_alive ?? true
+    form.death_date = formatForInput(props.member.profile?.death_date)
     form.birth_date = formatForInput(props.member.profile?.birth_date)
     form.birth_place = props.member.profile?.birth_place || ''
-    form.additional_info = props.member.profile?.additional_info || {}
+    form.additional_info = { ...(props.member.profile?.additional_info || {}) }
     form.social_media = props.member.profile?.social_media || []
     photoPreview.value = props.member.profile?.photo_url
   }
@@ -84,14 +87,18 @@ const filteredMasterFields = computed(() => {
 })
 
 function addAdditionalField(field) {
-  if (!form.additional_info[field.name]) {
-    form.additional_info[field.name] = ''
+  // Use spread to ensure Vue reactivity triggers
+  form.additional_info = {
+    ...form.additional_info,
+    [field.name]: ''
   }
   fieldSearch.value = ''
 }
 
 function removeAdditionalField(fieldName) {
-  delete form.additional_info[fieldName]
+  const newInfo = { ...form.additional_info }
+  delete newInfo[fieldName]
+  form.additional_info = newInfo
 }
 
 function addSocialMedia() {
@@ -115,8 +122,8 @@ function handlePhotoChange(e) {
 
 function submit() {
   const url = props.mode === 'create' 
-    ? storeRelation().url 
-    : updateProfile(props.member.id).url
+    ? `/api/relations`
+    : `/api/users/${props.member.id}/update`
     
   form.post(url, {
     onSuccess: () => emit('close'),
@@ -207,13 +214,26 @@ function submit() {
               </div>
 
               <div>
+                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Status Hidup</label>
+                <div class="flex gap-2 p-1 bg-gray-50 rounded-2xl">
+                  <button type="button" @click="form.is_alive = true" :class="['flex-1 py-3 text-xs font-black uppercase rounded-xl transition-all', form.is_alive ? 'bg-white shadow-sm text-emerald-600' : 'text-gray-400']">Hidup</button>
+                  <button type="button" @click="form.is_alive = false" :class="['flex-1 py-3 text-xs font-black uppercase rounded-xl transition-all', !form.is_alive ? 'bg-white shadow-sm text-slate-800' : 'text-gray-400']">Meninggal</button>
+                </div>
+              </div>
+
+              <div>
                 <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tempat Lahir</label>
                 <input v-model="form.birth_place" type="text" class="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl transition-all font-bold text-gray-800 outline-none" required />
               </div>
 
-              <div class="md:col-span-2">
+              <div>
                 <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tanggal Lahir</label>
                 <input v-model="form.birth_date" type="date" class="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl transition-all font-bold text-gray-800 outline-none" required />
+              </div>
+
+              <div v-if="!form.is_alive" class="md:col-span-2 animate-in slide-in-from-top-2">
+                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tanggal Wafat</label>
+                <input v-model="form.death_date" type="date" class="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-red-500 focus:bg-white rounded-2xl transition-all font-bold text-gray-800 outline-none" />
               </div>
             </div>
           </div>
@@ -222,13 +242,13 @@ function submit() {
           <div v-if="activeTab === 'tambahan'" class="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
             <!-- Search-Select Field Builder -->
             <div class="relative">
-              <div class="flex items-center gap-3 bg-gray-900 p-2 rounded-2xl shadow-xl">
-                <div class="pl-4 text-white">
+              <div class="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-xl border-2 border-gray-100">
+                <div class="pl-4 text-gray-400">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
-                <input v-model="fieldSearch" type="text" class="flex-1 bg-transparent border-none outline-none text-[10px] font-black uppercase text-white placeholder-gray-500 tracking-widest py-2" placeholder="Cari & Tambah Bidang Data..." />
+                <input v-model="fieldSearch" type="text" class="flex-1 bg-transparent border-none outline-none text-[10px] font-black uppercase text-gray-900 placeholder-gray-400 tracking-widest py-2" placeholder="Cari & Tambah Bidang Data..." />
               </div>
               
               <!-- Results dropdown -->

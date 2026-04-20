@@ -26,7 +26,7 @@ const mainNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [
         {
             title: 'Dashboard',
-            href: dashboard(),
+            href: dashboard.url(),
             icon: LayoutGrid,
         },
     ];
@@ -34,7 +34,7 @@ const mainNavItems = computed<NavItem[]>(() => {
     if (permissions.value.includes('view_dashboard')) {
         items.push({
             title: 'Family Tree',
-            href: tree.show(),
+            href: tree.show.url(),
             icon: Network,
         });
     }
@@ -48,7 +48,7 @@ const adminNavItems = computed<NavItem[]>(() => {
     if (permissions.value.includes('manage_users')) {
         items.push({
             title: 'Users',
-            href: admin.users.index(),
+            href: admin.users.index.url(),
             icon: Users,
         });
     }
@@ -56,7 +56,7 @@ const adminNavItems = computed<NavItem[]>(() => {
     if (permissions.value.includes('manage_roles')) {
         items.push({
             title: 'Roles',
-            href: admin.roles.index(),
+            href: admin.roles.index.url(),
             icon: ShieldCheck,
         });
     }
@@ -64,13 +64,13 @@ const adminNavItems = computed<NavItem[]>(() => {
     if (permissions.value.includes('manage_master_data')) {
         items.push({
             title: 'Social Media',
-            href: admin.socialMedias.index(),
+            href: admin.socialMedias.index.url(),
             icon: Share2,
         });
 
         items.push({
             title: 'Data Details',
-            href: admin.dataDetails.index(),
+            href: admin.dataDetails.index.url(),
             icon: Database,
         });
     }
@@ -85,7 +85,7 @@ const adminNavItems = computed<NavItem[]>(() => {
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="dashboard()">
+                        <Link :href="dashboard.url()">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>
@@ -97,9 +97,6 @@ const adminNavItems = computed<NavItem[]>(() => {
             <NavMain :items="mainNavItems" />
 
             <template v-if="adminNavItems.length > 0">
-                <div class="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4">
-                    Admin Panel
-                </div>
                 <NavMain :items="adminNavItems" />
             </template>
         </SidebarContent>

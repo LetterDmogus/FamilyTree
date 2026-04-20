@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\SocialMediaController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\FamilyTreeController;
 use App\Http\Controllers\MasterDataController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
@@ -14,7 +15,7 @@ Route::inertia('/', 'Welcome', [
 ])->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
 
     // Admin Panel
     Route::middleware('can:manage_roles')->group(function () {
@@ -55,7 +56,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/tree/{user?}', [FamilyTreeController::class, 'show'])->name('tree.show');
 
-    // Legacy Master Data (can be removed later if not used by frontend directly anymore)
+    // Legacy Master Data
     Route::post('/api/master-data/social-media', [MasterDataController::class, 'storeSocialMedia'])->name('master-data.social-media.store');
     Route::delete('/api/master-data/social-media/{socialMedia}', [MasterDataController::class, 'destroySocialMedia'])->name('master-data.social-media.destroy');
     Route::post('/api/master-data/additional-fields', [MasterDataController::class, 'storeAdditionalField'])->name('master-data.additional-fields.store');
@@ -66,6 +67,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/api/users/{user}/update', [FamilyTreeController::class, 'updateProfile'])->name('users.update');
     Route::delete('/api/users/{user}', [FamilyTreeController::class, 'destroyMember'])->name('users.destroy');
     Route::post('/api/relations', [FamilyTreeController::class, 'storeRelation'])->name('relations.store');
+    Route::post('/api/users/{user}/toggle-admin', [FamilyTreeController::class, 'toggleAdmin'])->name('users.toggle-admin');
 });
 
 require __DIR__.'/settings.php';
