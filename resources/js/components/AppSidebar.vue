@@ -45,7 +45,7 @@ const mainNavItems = computed<NavItem[]>(() => {
 const adminNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [];
 
-    if (permissions.value.includes('manage_users')) {
+    if (permissions.value.includes('view_users')) {
         items.push({
             title: 'Users',
             href: admin.users.index.url(),
@@ -53,7 +53,7 @@ const adminNavItems = computed<NavItem[]>(() => {
         });
     }
 
-    if (permissions.value.includes('manage_roles')) {
+    if (permissions.value.includes('view_roles')) {
         items.push({
             title: 'Roles',
             href: admin.roles.index.url(),
@@ -61,7 +61,7 @@ const adminNavItems = computed<NavItem[]>(() => {
         });
     }
 
-    if (permissions.value.includes('manage_master_data')) {
+    if (permissions.value.includes('view_master')) {
         items.push({
             title: 'Social Media',
             href: admin.socialMedias.index.url(),

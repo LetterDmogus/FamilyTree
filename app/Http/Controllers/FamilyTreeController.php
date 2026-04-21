@@ -9,13 +9,15 @@ use App\Models\MasterAdditionalField;
 use App\Models\MasterSocialMedia;
 use App\Services\FamilyTreeService;
 use App\Services\RelationshipCalculator;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
-use Spatie\Permission\Models\Role;
 
 class FamilyTreeController extends Controller
 {
+    use AuthorizesRequests;
+
     public function __construct(
         protected FamilyTreeService $treeService,
         protected RelationshipCalculator $calculator
@@ -36,6 +38,11 @@ class FamilyTreeController extends Controller
             'master' => [
                 'socialMedias' => MasterSocialMedia::all(),
                 'additionalFields' => MasterAdditionalField::all(),
+            ],
+            'can' => [
+                'manage_all' => $viewer->can('manage_tree_all'),
+                'manage_self' => $viewer->can('manage_tree_self'),
+                'delete_all' => $viewer->can('delete_node_all'),
             ]
         ]);
     }
@@ -99,7 +106,11 @@ class FamilyTreeController extends Controller
             'email' => $user->email,
             'relation_label' => $relationLabel,
             'profile' => $profile,
-            'is_admin' => $user->hasRole(['admin', 'superadmin']),
+            'can' => [
+                'toggle_admin' => auth()->user()->can('manage_roles'),
+                'delete' => auth()->user()->can('delete_node_all') && !$user->profile?->is_family_head,
+                'edit' => auth()->user()->can('manage_tree_all') || (auth()->user()->can('manage_tree_self') && auth()->id() === $user->id),
+            ]
         ]);
     }
 
@@ -121,6 +132,14 @@ class FamilyTreeController extends Controller
         ]);
 
         $targetUserId = $validated['user_id'];
+        
+        // Authorization check
+        $canManage = auth()->user()->can('manage_tree_all') || 
+                    (auth()->user()->can('manage_tree_self') && auth()->id() == $targetUserId);
+        
+        if (!$canManage) {
+            abort(403, 'Anda tidak memiliki izin untuk menambah anggota ini.');
+        }
 
         $user = User::create([
             'name' => explode(' ', $validated['full_name'])[0],
@@ -174,6 +193,14 @@ class FamilyTreeController extends Controller
 
     public function updateProfile(User $user, Request $request)
     {
+        // Authorization check
+        $canEdit = auth()->user()->can('manage_tree_all') || 
+                  (auth()->user()->can('manage_tree_self') && auth()->id() === $user->id);
+        
+        if (!$canEdit) {
+            abort(403, 'Anda tidak memiliki izin untuk mengedit profil ini.');
+        }
+
         $validated = $request->validate([
             'full_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
@@ -216,10 +243,7 @@ class FamilyTreeController extends Controller
 
     public function toggleAdmin(User $user)
     {
-        // Only superadmin or admin can promote others
-        if (!auth()->user()->hasRole(['admin', 'superadmin'])) {
-            return back()->withErrors(['error' => 'Anda tidak memiliki izin.']);
-        }
+        $this->authorize('manage_roles');
 
         if ($user->hasRole('admin')) {
             $user->removeRole('admin');
@@ -236,6 +260,8 @@ class FamilyTreeController extends Controller
 
     public function destroyMember(User $user)
     {
+        $this->authorize('delete_node_all');
+
         if ($user->profile->is_family_head) {
             return back()->withErrors(['error' => 'Kepala keluarga tidak dapat dihapus.']);
         }

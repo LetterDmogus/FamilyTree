@@ -44,13 +44,19 @@ const isOwnAccount = computed(() => {
   return page.props.auth.user?.id === props.node.id
 })
 
-const isViewerAdmin = computed(() => {
-  const user = page.props.auth.user
-  return user?.is_admin || user?.roles?.some(r => ['admin', 'superadmin'].includes(r.name))
+const canManage = computed(() => {
+  if (!details.value) return false
+  return details.value.can?.edit
 })
 
-const canManage = computed(() => {
-  return isOwnAccount.value || isViewerAdmin.value
+const canDelete = computed(() => {
+  if (!details.value) return false
+  return details.value.can?.delete
+})
+
+const canToggleAdmin = computed(() => {
+  if (!details.value) return false
+  return details.value.can?.toggle_admin
 })
 
 const masterFields = computed(() => page.props.master?.additionalFields || [])
@@ -148,121 +154,202 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
       <button @click="$emit('close')" class="absolute top-4 right-4 p-2.5 bg-black/20 hover:bg-black/40 text-white rounded-full transition-colors"><X class="w-4 h-4 stroke-[3]" /></button>
       <div class="absolute top-20 left-6 flex items-end">
         <div class="p-1 bg-white rounded-full shadow-2xl relative">
-          <img :src="details?.profile?.photo_url || 'https://ui-avatars.com/api/?name=' + node.panggilan" :class="['w-28 h-28 rounded-full border-4 border-white object-cover', !details?.profile?.is_alive ? 'grayscale' : '']" />
+          <div :class="['w-24 h-24 rounded-full border-4 border-white flex items-center justify-center text-3xl font-black text-white shadow-inner overflow-hidden bg-gray-200']">
+            <img v-if="details?.profile?.profile_photo_path" :src="'/storage/' + details.profile.profile_photo_path" class="w-full h-full object-cover" />
+            <div v-else class="w-full h-full flex items-center justify-center" :style="{ backgroundColor: '#cbd5e1' }">
+              {{ node.panggilan.substring(0, 2).toUpperCase() }}
+            </div>
+          </div>
           <div v-if="details?.is_admin" class="absolute -top-1 -right-1 w-8 h-8 bg-indigo-600 border-4 border-white rounded-full flex items-center justify-center text-white"><Shield class="w-3.5 h-3.5 fill-current" /></div>
-          <div v-if="details?.profile?.is_family_head" class="absolute -bottom-1 -right-1 w-8 h-8 bg-amber-500 border-4 border-white rounded-full flex items-center justify-center text-white"><Crown class="w-3.5 h-3.5 fill-current" /></div>
         </div>
-        <div v-if="!details?.profile?.is_alive" class="ml-2 mb-2 px-3 py-1 bg-slate-800 text-white text-[10px] font-black uppercase rounded-full shadow-lg flex items-center gap-1.5"><Skull class="w-3 h-3 text-slate-400" /> Meninggal</div>
+        <div class="mb-2 ml-4">
+          <h2 class="text-xl font-black tracking-tight text-gray-900 leading-none drop-shadow-sm">{{ details?.full_name || node.full_name }}</h2>
+          <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
+            <span class="px-2 py-0.5 bg-gray-100 rounded-md">{{ node.panggilan }}</span>
+            <span v-if="details?.profile?.is_family_head" class="flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md">
+              <Crown class="w-3 h-3" /> Kepala Keluarga
+            </span>
+          </p>
+        </div>
       </div>
     </div>
 
-    <!-- Identity & Tabs -->
-    <div class="mt-4 px-6 flex-shrink-0">
-      <div class="flex flex-col">
-        <div class="flex items-center gap-2">
-          <h2 class="text-2xl font-black text-gray-900 leading-none">{{ node.panggilan }}</h2>
-          <span v-if="age" class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-black rounded-md">{{ age }} TAHUN</span>
-        </div>
-        <p class="text-sm text-gray-400 font-medium mt-1 uppercase tracking-tighter">{{ node.full_name }}</p>
-      </div>
-      <div class="flex border-b border-gray-100 mt-6">
-        <button @click="activeTab = 'info'" :class="['px-4 py-2 text-xs font-black uppercase tracking-widest transition-all border-b-2', activeTab === 'info' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-600']">Informasi</button>
-        <button @click="activeTab = 'manage'" :class="['px-4 py-2 text-xs font-black uppercase tracking-widest transition-all border-b-2', activeTab === 'manage' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-600']">Kelola</button>
-      </div>
+    <!-- Tabs Navigation -->
+    <div class="px-6 flex border-b bg-gray-50/50">
+      <button v-for="tab in ['info', 'settings']" :key="tab" @click="activeTab = tab"
+        :class="['px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2', 
+          activeTab === tab ? 'border-indigo-600 text-indigo-600 bg-white' : 'border-transparent text-gray-400 hover:text-gray-600']">
+        {{ tab === 'info' ? 'Biodata' : 'Kelola' }}
+      </button>
     </div>
 
     <!-- Content -->
-    <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
-      <div v-if="http.processing" class="flex items-center justify-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div></div>
-      <div v-else-if="details">
-        <div v-if="activeTab === 'info'" class="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          
-          <!-- Static: Birth & Status -->
-          <section>
-            <div class="grid gap-4">
-              <div class="flex items-start gap-3">
-                <div class="p-2 bg-blue-50 text-blue-600 rounded-lg"><Calendar class="w-4 h-4 stroke-[2.5]" /></div>
-                <div><p class="text-[8px] text-gray-400 uppercase font-black tracking-widest">Lahir</p><p class="text-sm font-bold text-gray-800">{{ details.profile?.birth_place }}, {{ formatDate(details.profile?.birth_date) }}</p></div>
+    <div class="flex-1 overflow-y-auto custom-scrollbar">
+      <div v-if="!details" class="p-12 flex flex-col items-center justify-center text-center space-y-4 opacity-30">
+        <div class="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        <p class="text-[10px] font-black uppercase tracking-widest">Memuat Data...</p>
+      </div>
+
+      <div v-else class="p-8 space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        
+        <!-- Tab: Info -->
+        <div v-if="activeTab === 'info'" class="space-y-10">
+          <!-- Vital Stats -->
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-gray-50 p-5 rounded-3xl space-y-1 border border-gray-100/50">
+              <div class="flex items-center gap-2 text-gray-400 mb-1">
+                <component :is="details.profile.gender === 'F' ? Venus : Mars" class="w-3.5 h-3.5" />
+                <span class="text-[9px] font-black uppercase tracking-widest">Gender</span>
               </div>
-              <div v-if="!details.profile?.is_alive" class="flex items-start gap-3">
-                <div class="p-2 bg-slate-100 text-slate-600 rounded-lg"><Skull class="w-4 h-4" /></div>
-                <div><p class="text-[8px] text-gray-400 uppercase font-black tracking-widest">Wafat</p><p class="text-sm font-bold text-gray-800">{{ formatDate(details.profile?.death_date) }}</p></div>
+              <p class="text-sm font-black text-gray-800">{{ details.profile.gender === 'M' ? 'Laki-laki' : 'Perempuan' }}</p>
+            </div>
+            <div class="bg-gray-50 p-5 rounded-3xl space-y-1 border border-gray-100/50">
+              <div class="flex items-center gap-2 text-gray-400 mb-1">
+                <component :is="details.profile.is_alive ? Heart : Skull" class="w-3.5 h-3.5" />
+                <span class="text-[9px] font-black uppercase tracking-widest">Status</span>
               </div>
-              <div class="flex items-start gap-3">
-                <div :class="['p-2 rounded-lg', details.profile?.gender === 'F' ? 'bg-pink-50 text-pink-600' : 'bg-blue-50 text-blue-600']"><component :is="details.profile?.gender === 'F' ? Venus : Mars" class="w-4 h-4 stroke-[3]" /></div>
-                <div><p class="text-[8px] text-gray-400 uppercase font-black tracking-widest">Jenis Kelamin</p><p class="text-sm font-bold text-gray-800">{{ details.profile?.gender === 'F' ? 'Perempuan' : 'Laki-laki' }}</p></div>
+              <p class="text-sm font-black text-gray-800">{{ details.profile.is_alive ? (age ? `${age} Tahun` : 'Hidup') : 'Meninggal' }}</p>
+            </div>
+          </div>
+
+          <!-- Basic Info -->
+          <div class="space-y-6">
+            <div class="flex items-center gap-2 px-1 text-indigo-600">
+              <Info class="w-4 h-4" />
+              <span class="text-[10px] font-black uppercase tracking-widest">Informasi Dasar</span>
+            </div>
+            <div class="space-y-5 px-1">
+              <div v-if="details.profile.birth_date" class="flex gap-4">
+                <div class="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-500 flex-shrink-0"><Calendar class="w-5 h-5" /></div>
+                <div>
+                  <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Lahir</label>
+                  <p class="text-xs font-bold text-gray-700">{{ formatDate(details.profile.birth_date) }}</p>
+                  <p v-if="details.profile.birth_place" class="text-[10px] font-bold text-gray-400 mt-0.5 flex items-center gap-1"><MapPin class="w-3 h-3" /> {{ details.profile.birth_place }}</p>
+                </div>
               </div>
-              <div class="flex items-start gap-3">
-                <div class="p-2 bg-violet-50 text-violet-600 rounded-lg"><Info class="w-4 h-4 stroke-[2.5]" /></div>
-                <div><p class="text-[8px] text-gray-400 uppercase font-black tracking-widest">Hubungan</p><p class="text-sm font-black text-violet-600 uppercase">{{ details.relation_label }}</p></div>
+              <div v-if="!details.profile.is_alive && details.profile.death_date" class="flex gap-4">
+                <div class="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-500 flex-shrink-0"><Skull class="w-5 h-5" /></div>
+                <div>
+                  <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Wafat</label>
+                  <p class="text-xs font-bold text-gray-700">{{ formatDate(details.profile.death_date) }}</p>
+                </div>
+              </div>
+              <div v-if="details.profile.additional_info?.pekerjaan" class="flex gap-4">
+                <div class="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500 flex-shrink-0"><Briefcase class="w-5 h-5" /></div>
+                <div>
+                  <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Pekerjaan</label>
+                  <p class="text-xs font-bold text-gray-700">{{ details.profile.additional_info.pekerjaan }}</p>
+                </div>
+              </div>
+              <div class="flex gap-4">
+                <div class="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-500 flex-shrink-0"><Mail class="w-5 h-5" /></div>
+                <div>
+                  <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Email</label>
+                  <p class="text-xs font-bold text-gray-700">{{ details.email }}</p>
+                </div>
               </div>
             </div>
-          </section>
+          </div>
 
-          <!-- Grouped Dynamic Content -->
-          <template v-for="(fields, groupName) in groupedAdditionalInfo" :key="groupName">
-            <section class="space-y-4">
-              <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-100 pb-2">{{ groupName }}</h3>
-              
-              <div v-for="field in fields" :key="field.label" class="animate-in fade-in duration-500">
-                <!-- Group Style: Story/Textarea -->
-                <div v-if="field.type === 'textarea'" class="bg-gray-50 rounded-2xl p-5 border border-gray-100 shadow-inner">
-                  <div class="flex items-center gap-2 mb-3 text-indigo-600">
-                    <component :is="iconsMap[field.icon] || UserIcon" class="w-3.5 h-3.5" />
-                    <span class="text-[9px] font-black uppercase tracking-widest">{{ field.label }}</span>
-                  </div>
-                  <p class="text-sm font-medium text-gray-700 leading-relaxed whitespace-pre-wrap italic">{{ field.value }}</p>
-                </div>
-                
-                <!-- Group Style: Personal/Short Info -->
-                <div v-else class="flex items-center gap-4 bg-white p-3 rounded-2xl border border-gray-50 hover:border-blue-200 transition-all">
-                  <div class="p-2 bg-gray-50 text-gray-400 rounded-xl group-hover:text-blue-600 transition-colors">
-                    <component :is="iconsMap[field.icon] || UserIcon" class="w-4 h-4" />
+          <!-- Dynamic Master Data Sections -->
+          <div v-for="(fields, group) in groupedAdditionalInfo" :key="group" class="space-y-6">
+            <div class="flex items-center gap-2 px-1 text-gray-900/60">
+              <BookOpen class="w-4 h-4" />
+              <span class="text-[10px] font-black uppercase tracking-widest">{{ group }}</span>
+            </div>
+            <div class="grid gap-4">
+               <div v-for="field in fields" :key="field.label" class="bg-white border-2 border-gray-50 p-4 rounded-3xl flex items-center gap-4 hover:border-indigo-100 transition-all group">
+                  <div class="w-10 h-10 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-all">
+                    <component :is="iconsMap[field.icon] || UserIcon" class="w-5 h-5" />
                   </div>
                   <div>
-                    <p class="text-[8px] text-gray-400 uppercase font-black tracking-widest">{{ field.label }}</p>
-                    <p class="text-sm font-bold text-gray-800">{{ field.value }}</p>
+                    <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">{{ field.label }}</label>
+                    <p class="text-xs font-bold text-gray-700">{{ field.type === 'date' ? formatDate(field.value) : field.value }}</p>
                   </div>
-                </div>
-              </div>
-            </section>
-          </template>
+               </div>
+            </div>
+          </div>
 
           <!-- Social Media -->
-          <section v-if="details.profile?.social_media && details.profile?.social_media.length > 0">
-            <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-100 pb-2">Media Sosial</h3>
-            <div class="flex flex-wrap gap-3">
-              <a v-for="(sm, idx) in details.profile.social_media" :key="idx" :href="getFullSocialUrl(sm)" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 px-4 py-2 bg-white rounded-2xl border border-gray-100 hover:border-blue-500 hover:bg-blue-50/20 transition-all shadow-sm group">
-                <div class="w-5 h-5 flex-shrink-0 flex items-center justify-center relative">
-                   <img :src="`https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/${sm.platform_name.toLowerCase().replace(/ /g, '').replace(/\(twitter\)/g, '')}.svg`" class="w-4 h-4 opacity-50 group-hover:opacity-100 transition-opacity" />
-                </div>
-                <div class="flex flex-col">
-                  <span class="text-[8px] font-black text-gray-400 uppercase tracking-tighter">{{ sm.platform_name }}</span>
-                  <span class="text-xs text-gray-900 font-bold group-hover:text-blue-700 transition-colors">@{{ sm.username }}</span>
-                </div>
+          <div v-if="details.profile.social_media?.length" class="space-y-6">
+            <div class="flex items-center gap-2 px-1 text-pink-600">
+              <Share2 class="w-4 h-4" />
+              <span class="text-[10px] font-black uppercase tracking-widest">Media Sosial</span>
+            </div>
+            <div class="flex flex-wrap gap-2 px-1">
+              <a v-for="(sm, idx) in details.profile.social_media" :key="idx" :href="getFullSocialUrl(sm)" target="_blank"
+                class="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-600 hover:bg-white hover:border-pink-200 hover:text-pink-600 hover:shadow-lg transition-all">
+                {{ sm.platform_name }}: {{ sm.username }}
+                <ExternalLink class="w-3 h-3 opacity-40" />
               </a>
             </div>
-          </section>
+          </div>
         </div>
 
-        <!-- Manage Tab -->
-        <div v-if="activeTab === 'manage'" class="space-y-4">
-           <!-- (Aksi Admin & Tombol Edit/Hapus tetap sama seperti sebelumnya) -->
-           <div v-if="isViewerAdmin && !isOwnAccount" class="bg-indigo-50 border-2 border-indigo-100 p-5 rounded-3xl mb-8 flex flex-col gap-4">
-              <div class="flex items-start gap-3">
-                <div class="p-2 bg-indigo-600 text-white rounded-xl shadow-lg"><Shield class="w-4 h-4 fill-current" /></div>
-                <div><p class="text-[10px] font-black text-indigo-600 uppercase tracking-widest leading-none">Administrator</p><p class="text-[9px] text-indigo-400 font-bold uppercase mt-1 leading-relaxed">Kelola seluruh silsilah secara bebas.</p></div>
-              </div>
-              <button @click="handleToggleAdmin" :class="['w-full py-3 rounded-2xl text-[10px] font-black uppercase transition-all shadow-lg', details.is_admin ? 'bg-white text-red-600 border-2 border-red-50 hover:bg-red-50' : 'bg-indigo-600 text-white hover:bg-indigo-700']">{{ details.is_admin ? 'Cabut Akses Admin' : 'Jadikan Admin' }}</button>
+        <!-- Tab: Settings -->
+        <div v-if="activeTab === 'settings'" class="space-y-8 pb-12">
+          
+          <!-- Hierarchical Actions -->
+          <div v-if="canManage" class="space-y-4 animate-in slide-in-from-top-4 duration-500">
+            <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] px-1">Koneksi Silsilah</h3>
+            <div class="grid gap-3">
+              <button @click="$emit('add-relation', { node, type: 'parent' })" class="w-full p-5 bg-white border-2 border-gray-50 rounded-[2rem] flex items-center justify-between hover:border-indigo-600 hover:shadow-xl transition-all group">
+                <div class="flex items-center gap-4">
+                  <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform"><ArrowUpCircle class="w-5 h-5" /></div>
+                  <div class="text-left">
+                    <p class="text-xs font-black text-gray-900 uppercase">Tambah Orang Tua</p>
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Ayah atau Ibu</p>
+                  </div>
+                </div>
+                <PlusCircle class="w-4 h-4 text-gray-200 group-hover:text-indigo-600 transition-colors" />
+              </button>
+
+              <button @click="$emit('add-relation', { node, type: 'spouse' })" class="w-full p-5 bg-white border-2 border-gray-50 rounded-[2rem] flex items-center justify-between hover:border-rose-500 hover:shadow-xl transition-all group">
+                <div class="flex items-center gap-4">
+                  <div class="w-10 h-10 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center group-hover:scale-110 transition-transform"><Heart class="w-5 h-5" /></div>
+                  <div class="text-left">
+                    <p class="text-xs font-black text-gray-900 uppercase">Tambah Pasangan</p>
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Suami atau Istri</p>
+                  </div>
+                </div>
+                <PlusCircle class="w-4 h-4 text-gray-200 group-hover:text-rose-500 transition-colors" />
+              </button>
+
+              <button @click="$emit('add-relation', { node, type: 'child' })" class="w-full p-5 bg-white border-2 border-gray-50 rounded-[2rem] flex items-center justify-between hover:border-emerald-500 hover:shadow-xl transition-all group">
+                <div class="flex items-center gap-4">
+                  <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform"><UserPlus class="w-5 h-5" /></div>
+                  <div class="text-left">
+                    <p class="text-xs font-black text-gray-900 uppercase">Tambah Anak</p>
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Putra atau Putri</p>
+                  </div>
+                </div>
+                <PlusCircle class="w-4 h-4 text-gray-200 group-hover:text-emerald-500 transition-colors" />
+              </button>
             </div>
-            <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4 px-1">Tindakan</h3>
-            <template v-if="canManage">
-              <button @click="$emit('add-relation', 'child')" class="group w-full flex items-center justify-between p-4 bg-white border-2 border-blue-50 rounded-2xl hover:border-blue-500 transition-all"><div class="flex items-center gap-4"><div class="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors"><UserPlus class="w-6 h-6 stroke-[2.5]" /></div><div class="text-left"><p class="font-bold text-gray-800">Tambah Anak</p><p class="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Tambahkan keturunan baru</p></div></div></button>
-              <button @click="$emit('add-relation', 'spouse')" class="group w-full flex items-center justify-between p-4 bg-white border-2 border-pink-50 rounded-2xl hover:border-pink-500 transition-all"><div class="flex items-center gap-4"><div class="p-3 bg-pink-50 text-pink-600 rounded-xl group-hover:bg-pink-600 group-hover:text-white transition-colors"><Heart class="w-6 h-6 stroke-[2.5]" /></div><div class="text-left"><p class="font-bold text-gray-800">Tambah Pasangan</p><p class="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Hubungkan suami atau istri</p></div></div></button>
-              <button @click="$emit('add-relation', 'parent')" class="group w-full flex items-center justify-between p-4 bg-white border-2 border-emerald-50 rounded-2xl hover:border-emerald-500 transition-all"><div class="flex items-center gap-4"><div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl group-hover:bg-emerald-600 group-hover:text-white transition-colors"><ArrowUpCircle class="w-6 h-6 stroke-[2.5]" /></div><div class="text-left"><p class="font-bold text-gray-800">Tambah Orang Tua</p><p class="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Hubungkan Ayah atau Ibu</p></div></div></button>
-              <button @click="$emit('edit-profile', details)" class="group w-full flex items-center justify-between p-4 bg-white border-2 border-gray-50 rounded-2xl hover:border-blue-500 transition-all"><div class="flex items-center gap-4"><div class="p-3 bg-gray-50 text-gray-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors"><PenLine class="w-6 h-6 stroke-[2.5]" /></div><div class="text-left"><p class="font-bold text-gray-800">Perbarui Profil</p><p class="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Ubah data & modular info</p></div></div></button>
-            </template>
-            <button v-if="canManage && !details.profile?.is_family_head" @click="deleteMember" class="group w-full flex items-center justify-between p-4 bg-white border-2 border-red-50 rounded-2xl hover:border-red-500 transition-all"><div class="flex items-center gap-4"><div class="p-3 bg-red-50 text-red-600 rounded-xl group-hover:bg-red-600 group-hover:text-white transition-colors"><Trash2 class="w-6 h-6 stroke-[2.5]" /></div><div class="text-left"><p class="font-bold text-gray-800">Hapus Anggota</p><p class="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Hapus permanen dari silsilah</p></div></div></button>
+          </div>
+
+          <!-- Administrative Controls -->
+          <div class="space-y-4 pt-4 border-t border-dashed">
+            <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] px-1">Kontrol Keanggotaan</h3>
+            <div class="grid gap-3">
+              <button @click="$emit('edit-profile', details)" v-if="canManage" class="w-full py-4 bg-gray-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg flex items-center justify-center gap-3">
+                <PenLine class="w-4 h-4" /> Edit Profil Anggota
+              </button>
+              
+              <button v-if="canToggleAdmin" @click="handleToggleAdmin" :class="['w-full py-3 rounded-2xl text-[10px] font-black uppercase transition-all shadow-lg', details.is_admin ? 'bg-white text-red-600 border-2 border-red-50 hover:bg-red-50' : 'bg-indigo-600 text-white hover:bg-indigo-700']">
+                {{ details.is_admin ? 'Cabut Akses Admin' : 'Jadikan Admin' }}
+              </button>
+
+              <button v-if="canDelete" @click="deleteMember" class="w-full py-3 bg-white text-gray-400 hover:text-red-600 border-2 border-transparent hover:border-red-100 rounded-2xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-3">
+                <Trash2 class="w-4 h-4" /> Hapus dari Silsilah
+              </button>
+            </div>
+          </div>
+
+          <div v-if="!canManage && !canDelete && !canToggleAdmin" class="py-12 text-center opacity-30 grayscale">
+            <Shield class="w-12 h-12 mx-auto mb-4" />
+            <p class="text-[10px] font-black uppercase tracking-widest leading-loose">Anda tidak memiliki izin <br/> untuk mengelola anggota ini.</p>
+          </div>
         </div>
       </div>
     </div>
@@ -272,5 +359,5 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
 <style scoped>
 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #f1f1f1; border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
 </style>

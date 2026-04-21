@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Role;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Permission;
@@ -12,40 +13,44 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class RoleController extends Controller
 {
+    use AuthorizesRequests;
+
     public function index()
     {
-        request()->merge([
-            'filter' => array_merge(request()->get('filter', []), [
-                'search' => request()->get('search'),
-                'trashed' => request()->get('trashed'),
-            ]),
-        ]);
+        $this->authorize('view_roles');
 
         $roles = QueryBuilder::for(Role::with('permissions'))
             ->allowedFilters(
-                AllowedFilter::scope('search'),
-                AllowedFilter::trashed(),
+                AllowedFilter::partial('name'),
             )
             ->allowedSorts('name', 'created_at')
             ->defaultSort('name')
-            ->paginate(10)
+            ->paginate(request('per_page', 10))
             ->withQueryString();
 
         return Inertia::render('Admin/Roles/Index', [
             'items' => $roles,
-            'filters' => request()->all(['search', 'trashed', 'sort']),
             'allPermissions' => Permission::all(),
+            'filters' => request()->all(['search', 'sort', 'per_page']),
+            'can' => [
+                'create' => auth()->user()->can('create_roles'),
+                'update' => auth()->user()->can('update_roles'),
+                'delete' => auth()->user()->can('delete_roles'),
+            ]
         ]);
     }
 
     public function store(Request $request)
     {
+        $this->authorize('create_roles');
+
         $validated = $request->validate([
             'name' => 'required|string|unique:roles,name',
-            'permissions' => 'array',
+            'permissions' => 'nullable|array',
         ]);
 
-        $role = Role::create(['name' => $validated['name']]);
+        $role = Role::create(['name' => $validated['name'], 'guard_name' => 'web']);
+        
         if (isset($validated['permissions'])) {
             $role->syncPermissions($validated['permissions']);
         }
@@ -55,39 +60,32 @@ class RoleController extends Controller
 
     public function update(Request $request, Role $role)
     {
+        $this->authorize('update_roles');
+
         $validated = $request->validate([
             'name' => 'required|string|unique:roles,name,'.$role->id,
-            'permissions' => 'array',
+            'permissions' => 'nullable|array',
         ]);
 
         $role->update(['name' => $validated['name']]);
-        $role->syncPermissions($validated['permissions'] ?? []);
+        
+        if (isset($validated['permissions'])) {
+            $role->syncPermissions($validated['permissions']);
+        }
 
         return back()->with('success', 'Role updated successfully.');
     }
 
     public function destroy(Role $role)
     {
-        $role->delete();
+        $this->authorize('delete_roles');
 
-        return back()->with('success', 'Role soft deleted successfully.');
-    }
-
-    public function restore($id)
-    {
-        Role::withTrashed()->findOrFail($id)->restore();
-
-        return back()->with('success', 'Role restored successfully.');
-    }
-
-    public function forceDestroy($id)
-    {
-        if (! auth()->user()->hasRole('superadmin')) {
-            abort(403);
+        if ($role->name === 'superadmin') {
+            return back()->with('error', 'Cannot delete superadmin role.');
         }
 
-        Role::withTrashed()->findOrFail($id)->forceDelete();
+        $role->delete();
 
-        return back()->with('success', 'Role permanently deleted.');
+        return back()->with('success', 'Role deleted successfully.');
     }
 }

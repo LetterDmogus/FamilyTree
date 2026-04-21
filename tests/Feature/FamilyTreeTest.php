@@ -36,7 +36,7 @@ test('relationship calculator identifies child and parent', function () {
 
     $calculator = new RelationshipCalculator();
     
-    expect($calculator->calculate($parent, $child))->toBe('Anak');
+    expect($calculator->calculate($parent, $child))->toBe('Anak Laki-laki');
     expect($calculator->calculate($child, $parent))->toBe('Ayah'); // Default M
 });
 
@@ -50,7 +50,7 @@ test('relationship calculator identifies siblings', function () {
 
     $calculator = new RelationshipCalculator();
     
-    expect($calculator->calculate($child1, $child2))->toBe('Saudara'); // No birth dates in factory
+    expect($calculator->calculate($child1, $child2))->toBe('Saudara Kandung'); // No birth dates in factory
 });
 
 test('relationship calculator identifies self as saya', function () {
@@ -58,6 +58,19 @@ test('relationship calculator identifies self as saya', function () {
     $calculator = new RelationshipCalculator();
     
     expect($calculator->calculate($user, $user))->toBe('saya');
+});
+
+test('relationship calculator identifies step-child and step-parent', function () {
+    $parent = User::factory()->create();
+    $child = User::factory()->create();
+
+    // Step-child relationship
+    Relation::create(['user_id' => $parent->id, 'related_user_id' => $child->id, 'type' => 'child', 'is_blood' => false]);
+
+    $calculator = new RelationshipCalculator();
+    
+    expect($calculator->calculate($parent, $child))->toBe('Anak Tiri Laki-laki');
+    expect($calculator->calculate($child, $parent))->toBe('Ayah Tiri');
 });
 
 test('family tree controller returns inertia show page', function () {

@@ -2,6 +2,7 @@
 /**
  * TREECANVAS.VUE
  * Renders all connecting lines using SVG based on global coordinates.
+ * Updated to support children per spouse (multi-spouse system) and is_blood styling.
  */
 import { computed } from 'vue'
 
@@ -40,66 +41,37 @@ function collectPaths(node, paths = []) {
   const nodeHeight = props.config.nodeHeight
   const spouseGap = props.config.spouseGap
 
-  // 1. Marriage Line & Junction
-  let junctionX = currentPos.x + nodeWidth / 2
-  
+  // --- 1. HANDLE DIRECT CHILDREN (No specific spouse) ---
+  if (node.children && node.children.length > 0) {
+    const junctionX = currentPos.x + nodeWidth / 2
+    drawDescent(junctionX, currentPos.y, node.children, paths)
+    
+    // Recurse for each direct child
+    node.children.forEach(child => collectPaths(child, paths))
+  }
+
+  // --- 2. HANDLE SPOUSES AND THEIR CHILDREN ---
   if (node.spouse && node.spouse.length > 0) {
-    const firstSpousePos = props.positions[node.spouse[0].id]
-    if (firstSpousePos) {
-      // Line between Bio and Spouse
+    node.spouse.forEach(spouse => {
+      const spousePos = props.positions[spouse.id]
+      if (!spousePos) return
+
+      // Line between Bio and this Spouse
       paths.push({
         type: 'marriage',
         x1: currentPos.x + nodeWidth,
         y1: currentPos.y + nodeHeight / 2,
-        x2: firstSpousePos.x,
-        y2: firstSpousePos.y + nodeHeight / 2
+        x2: spousePos.x,
+        y2: spousePos.y + nodeHeight / 2
       })
-      // Update junction to be in the middle of the marriage bridge
-      junctionX = (currentPos.x + nodeWidth + firstSpousePos.x) / 2
-    }
-  }
 
-  // 2. Descent Stem (Vertical from Junction)
-  if (node.children && node.children.length > 0) {
-    const firstChildY = props.positions[node.children[0].id].y
-    const stemBottomY = firstChildY - (firstChildY - currentPos.y - nodeHeight) / 2
-    
-    // Line down from parent/junction
-    paths.push({
-      type: 'stem-down',
-      x1: junctionX,
-      y1: currentPos.y + nodeHeight / 2,
-      x2: junctionX,
-      y2: stemBottomY
-    })
-
-    // 3. Sibling Bridge (Horizontal)
-    if (node.children.length > 1) {
-      const firstChildX = props.positions[node.children[0].id].x + nodeWidth / 2
-      const lastChildX = props.positions[node.children[node.children.length - 1].id].x + nodeWidth / 2
-      
-      paths.push({
-        type: 'sibling-bridge',
-        x1: firstChildX,
-        y1: stemBottomY,
-        x2: lastChildX,
-        y2: stemBottomY
-      })
-    }
-
-    // 4. Individual Child Stems (Up to bridge)
-    node.children.forEach(child => {
-      const childPos = props.positions[child.id]
-      if (childPos) {
-        paths.push({
-          type: 'child-stem',
-          x1: childPos.x + nodeWidth / 2,
-          y1: stemBottomY,
-          x2: childPos.x + nodeWidth / 2,
-          y2: childPos.y
-        })
-        // Recurse
-        collectPaths(child, paths)
+      // If this marriage has children
+      if (spouse.children && spouse.children.length > 0) {
+        const marriageJunctionX = (currentPos.x + nodeWidth + spousePos.x) / 2
+        drawDescent(marriageJunctionX, currentPos.y, spouse.children, paths)
+        
+        // Recurse for each child of this spouse
+        spouse.children.forEach(child => collectPaths(child, paths))
       }
     })
   }
@@ -107,15 +79,63 @@ function collectPaths(node, paths = []) {
   return paths
 }
 
+/**
+ * Helper to draw descent lines from a junction point to a set of children
+ */
+function drawDescent(junctionX, parentY, children, paths) {
+  const nodeWidth = props.config.nodeWidth
+  const nodeHeight = props.config.nodeHeight
+  const firstChildPos = props.positions[children[0].id]
+  
+  if (!firstChildPos) return
+
+  // Vertical Stem Down from Junction
+  const stemBottomY = firstChildPos.y - (firstChildPos.y - parentY - nodeHeight) / 2
+  
+  paths.push({
+    type: 'stem-down',
+    x1: junctionX,
+    y1: parentY + nodeHeight / 2,
+    x2: junctionX,
+    y2: stemBottomY
+  })
+
+  // Horizontal Sibling Bridge
+  if (children.length > 1) {
+    const firstChildX = props.positions[children[0].id].x + nodeWidth / 2
+    const lastChildX = props.positions[children[children.length - 1].id].x + nodeWidth / 2
+    
+    paths.push({
+      type: 'sibling-bridge',
+      x1: firstChildX,
+      y1: stemBottomY,
+      x2: lastChildX,
+      y2: stemBottomY
+    })
+  }
+
+  // Individual Child Stems (Up from child to bridge)
+  children.forEach(child => {
+    const childPos = props.positions[child.id]
+    if (childPos) {
+      paths.push({
+        type: 'child-stem',
+        x1: childPos.x + nodeWidth / 2,
+        y1: stemBottomY,
+        x2: childPos.x + nodeWidth / 2,
+        y2: childPos.y,
+        isBlood: child.is_blood !== false // Default to true if not specified
+      })
+    }
+  })
+}
+
 const allPaths = computed(() => collectPaths(props.rootNode))
 
 const junctionPoints = computed(() => {
   return allPaths.value
-    .filter(p => p.type === 'marriage' || (p.type === 'stem-down' && !allPaths.value.find(ap => ap.type === 'marriage' && ap.x1 === p.x1)))
-    .map(p => {
-       if (p.type === 'marriage') return { x: (p.x1 + p.x2) / 2, y: p.y1 }
-       return null
-    }).filter(p => p !== null)
+    .filter(p => p.type === 'marriage')
+    .map(p => ({ x: (p.x1 + p.x2) / 2, y: p.y1 }))
 })
 </script>
 
@@ -135,6 +155,7 @@ const junctionPoints = computed(() => {
         :x2="path.x2" :y2="path.y2"
         :stroke="config.lineColor"
         :stroke-width="config.lineWidth"
+        :stroke-dasharray="path.isBlood === false ? '5,5' : 'none'"
         stroke-linecap="round"
       />
 

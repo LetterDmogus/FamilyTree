@@ -33,40 +33,48 @@ class FamilyTreeSeeder extends Seeder
         $ayah->assignRole($adminRole); // Agus is Admin
 
         $ibu = $this->createUser('Ibu Maya', 'Maya Sari', 'F', '1978-02-22', 'Bandung');
-        $this->addChild($kakek, $ayah);
+        $this->addChild([$kakek, $nenek], $ayah);
         $this->addSpouse($ayah, $ibu);
 
         $paman = $this->createUser('Paman Bambang', 'Bambang Santoso', 'M', '1980-03-03', 'Solo');
         $bibi1 = $this->createUser('Bibi Sari', 'Sari Fatmawati', 'F', '1982-04-04', 'Semarang');
-        $this->addChild($kakek, $paman);
+        $this->addChild([$kakek, $nenek], $paman);
         $this->addSpouse($paman, $bibi1);
 
         $bibi2 = $this->createUser('Bibi Wati', 'Wati Santoso', 'F', '1985-12-12', 'Solo');
-        $this->addChild($kakek, $bibi2);
+        $this->addChild([$kakek, $nenek], $bibi2);
 
         // 3. GENERASI 3: CUCU-CUCU
         $cici = $this->createUser('saya', 'Cici Santoso', 'F', '2005-10-10', 'Batam');
         $didi = $this->createUser('Didi', 'Didi Santoso', 'M', '2008-12-12', 'Batam');
-        $this->addChild($ayah, $cici);
-        $this->addChild($ayah, $didi);
+        $this->addChild([$ayah, $ibu], $cici);
+        $this->addChild([$ayah, $ibu], $didi);
 
         $suamiCici = $this->createUser('Feri', 'Feri Hermawan', 'M', '2003-05-05', 'Batam');
         $this->addSpouse($cici, $suamiCici);
 
         $eko = $this->createUser('Eko', 'Eko Santoso', 'M', '2006-01-01', 'Semarang');
         $fani = $this->createUser('Fani', 'Fani Santoso', 'F', '2009-05-05', 'Semarang');
-        $this->addChild($paman, $eko);
-        $this->addChild($paman, $fani);
+        $this->addChild([$paman, $bibi1], $eko);
+        $this->addChild([$paman, $bibi1], $fani);
 
         $istriEko = $this->createUser('Gita', 'Gita Permata', 'F', '2007-02-02', 'Semarang');
         $this->addSpouse($eko, $istriEko);
 
-        // 4. GENERASI 4: CICIT
-        $hani = $this->createUser('Hani', 'Hani Santoso', 'F', '2025-01-01', 'Semarang');
-        $this->addChild($eko, $hani);
+        // SCENARIO: ANAK TIRI
+        // Bibi Wati menikah lagi dengan Paman Roni
+        // Bibi Wati punya anak (Gina) dari pernikahan sebelumnya (biological)
+        // Paman Roni menjadi Ayah Tiri Gina (is_blood = false)
+        $pamanRoni = $this->createUser('Paman Roni', 'Roni Wijaya', 'M', '1983-07-07', 'Solo');
+        $this->addSpouse($bibi2, $pamanRoni);
 
         $gina = $this->createUser('Gina', 'Gina Putri', 'F', '2018-09-09', 'Solo');
-        $this->addChild($bibi2, $gina);
+        $this->addChild($bibi2, $gina, true); // Biological for Wati
+        $this->addChild($pamanRoni, $gina, false); // Step-child for Roni
+
+        // 4. GENERASI 4: CICIT
+        $hani = $this->createUser('Hani', 'Hani Santoso', 'F', '2025-01-01', 'Semarang');
+        $this->addChild([$eko, $istriEko], $hani);
     }
 
     private function createUser($name, $fullName, $gender, $birthDate, $birthPlace, $isHead = false, $isAlive = true, $deathDate = null)
@@ -99,8 +107,19 @@ class FamilyTreeSeeder extends Seeder
         Relation::create(['user_id' => $user2->id, 'related_user_id' => $user1->id, 'type' => 'spouse', 'is_blood' => false]);
     }
 
-    private function addChild($parent, $child)
+    private function addChild($parents, $child, $isBlood = true)
     {
-        Relation::create(['user_id' => $parent->id, 'related_user_id' => $child->id, 'type' => 'child', 'is_blood' => true]);
+        if (!is_array($parents)) {
+            $parents = [$parents];
+        }
+
+        foreach ($parents as $parent) {
+            Relation::create([
+                'user_id' => $parent->id, 
+                'related_user_id' => $child->id, 
+                'type' => 'child', 
+                'is_blood' => $isBlood
+            ]);
+        }
     }
 }

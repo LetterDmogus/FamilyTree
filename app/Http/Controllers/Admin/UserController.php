@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -12,12 +13,19 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class UserController extends Controller
 {
+    use AuthorizesRequests;
+
     public function index()
     {
+        $this->authorize('view_users');
+
+        $canAccessTrash = auth()->user()->can('access_trash_users');
+        $requestedTrashed = request()->get('trashed');
+
         request()->merge([
             'filter' => array_merge(request()->get('filter', []), [
                 'search' => request()->get('search'),
-                'trashed' => request()->get('trashed'),
+                'trashed' => $canAccessTrash ? $requestedTrashed : null,
             ]),
         ]);
 
@@ -35,11 +43,19 @@ class UserController extends Controller
             'items' => $users,
             'filters' => request()->all(['search', 'trashed', 'sort', 'per_page']),
             'roles' => Role::all(),
+            'can' => [
+                'create' => auth()->user()->can('create_users'),
+                'update' => auth()->user()->can('update_users'),
+                'delete' => auth()->user()->can('delete_users'),
+                'access_trash' => $canAccessTrash,
+            ]
         ]);
     }
 
     public function update(Request $request, User $user)
     {
+        $this->authorize('update_users');
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,'.$user->id,
@@ -58,6 +74,8 @@ class UserController extends Controller
 
     public function resetPassword(User $user)
     {
+        $this->authorize('update_users');
+
         $user->update([
             'password' => bcrypt('password'),
         ]);
@@ -67,6 +85,8 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
+        $this->authorize('delete_users');
+
         $user->delete();
 
         return back()->with('success', 'User soft deleted successfully.');
@@ -74,6 +94,8 @@ class UserController extends Controller
 
     public function restore($id)
     {
+        $this->authorize('access_trash_users');
+
         User::withTrashed()->findOrFail($id)->restore();
 
         return back()->with('success', 'User restored successfully.');
@@ -81,9 +103,7 @@ class UserController extends Controller
 
     public function forceDestroy($id)
     {
-        if (! auth()->user()->hasRole('superadmin')) {
-            abort(403);
-        }
+        $this->authorize('access_trash_users');
 
         User::withTrashed()->findOrFail($id)->forceDelete();
 

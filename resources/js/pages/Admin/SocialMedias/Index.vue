@@ -23,6 +23,12 @@ const props = defineProps<{
         meta?: any;
     };
     filters: any;
+    can: {
+        create: boolean;
+        update: boolean;
+        delete: boolean;
+        access_trash: boolean;
+    }
 }>();
 
 defineOptions({
@@ -127,9 +133,10 @@ const submit = () => {
             :columns="columns"
             :filters="filters"
             :routes="routes"
+            :can="can"
             @edit="handleEdit"
         >
-            <template #actions>
+            <template #header-actions>
                 <Button @click="openCreateModal" class="bg-gray-900 text-white rounded-xl font-bold text-xs shadow-lg h-12 px-6">
                     <Plus class="mr-2 h-4 w-4 stroke-[3]" />
                     Tambah Platform

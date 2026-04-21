@@ -299,7 +299,7 @@ onUnmounted(() => {
 
       <!-- Floating Controls (Emoji Shortcuts) -->
       <transition enter-active-class="transition duration-300 ease-out" enter-from-class="transform translate-y-4 opacity-0" enter-to-class="transform translate-y-0 opacity-100" leave-active-class="transition duration-200 ease-in" leave-from-class="transform translate-y-0 opacity-100" leave-to-class="transform translate-y-4 opacity-0">
-        <div v-if="showControls && !isExportMode" :class="['fixed bottom-8 right-8 flex items-end gap-4 z-30 transition-all duration-300', selectedNode || isAiPanelOpen ? 'mr-96' : '']">
+        <div v-if="showControls && !isExportMode" :class="['fixed bottom-8 right-8 flex items-end gap-4 z-30 transition-all duration-300', selectedNode || isAiPanelOpen || exportModalOpen ? 'mr-96' : '']">
           <div class="flex flex-col gap-4 items-end">
             <!-- Wise Mystical Tree Trigger -->
             <button @click="toggleAiPanel" class="p-4 bg-emerald-600 text-white rounded-[2rem] shadow-2xl hover:bg-emerald-700 hover:scale-105 transition-all group relative border-4 border-white">
