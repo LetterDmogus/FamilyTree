@@ -180,7 +180,7 @@ const submit = () => {
                         <Sparkles class="w-3 h-3" /> Pilihan Cepat
                     </Label>
                     <div class="flex flex-wrap gap-2">
-                        <button v-for="p in presets" :key="p.name" @click="applyPreset(p)" type="button" class="p-3 bg-gray-50 hover:bg-blue-50 border border-transparent hover:border-blue-200 rounded-xl transition-all shadow-sm group">
+                        <button v-for="p in presets" :key="p.name" @click="applyPreset(p)" type="button" class="p-3 bg-gray-50 hover:bg-emerald-50 border border-transparent hover:border-blue-200 rounded-xl transition-all shadow-sm group">
                             <img :src="`https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/${p.slug}.svg`" class="w-5 h-5 opacity-40 group-hover:opacity-100 transition-opacity" />
                         </button>
                     </div>
@@ -211,7 +211,7 @@ const submit = () => {
             </div>
 
             <DialogFooter>
-                <Button type="submit" @click="submit" :disabled="form.processing" class="w-full py-7 bg-gray-900 text-white rounded-3xl font-bold text-sm hover:bg-blue-600 transition-all shadow-xl shadow-gray-100">
+                <Button type="submit" @click="submit" :disabled="form.processing" class="w-full py-7 bg-gray-900 text-white rounded-3xl font-bold text-sm hover:bg-emerald-600 transition-all shadow-xl shadow-gray-100">
                     {{ editingItem ? 'Simpan Perubahan' : 'Simpan Platform Baru' }}
                 </Button>
             </DialogFooter>

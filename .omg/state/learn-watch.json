@@ -1,12 +1,12 @@
 {
-  "last_session_id": "f0bea983-cd4d-4dcc-bfae-3973cfdc7eb5",
-  "last_event_key": "f0bea983-cd4d-4dcc-bfae-3973cfdc7eb5:transcript:85b5f3249ee7d49c1ce8d1683951a02ad591f7e52bdbd1489071ca8526bf4dbd",
-  "last_prompted_session_id": "f0bea983-cd4d-4dcc-bfae-3973cfdc7eb5",
-  "last_reason": "already-prompted-this-session",
-  "last_prompted_at": "2026-04-20T13:16:45.359Z",
-  "last_user_message_count": 21,
-  "last_actionable_message_count": 4,
+  "last_session_id": "6b814dcf-c622-45aa-b0a9-2e896007bba7",
+  "last_event_key": "6b814dcf-c622-45aa-b0a9-2e896007bba7:transcript:d87a472b1fac0ef4b57ae2331d2634ee258eef0578e03761cb7f1fbfeadf958a",
+  "last_prompted_session_id": "6b814dcf-c622-45aa-b0a9-2e896007bba7",
+  "last_reason": "prompt-cooldown-active",
+  "last_prompted_at": "2026-04-22T13:00:11.553Z",
+  "last_user_message_count": 20,
+  "last_actionable_message_count": 1,
   "deep_interview_lock_active": false,
   "deep_interview_lock_source": "/home/floaty/Documents/Laravel/family-tree/.omg/state/deep-interview.json",
-  "updated_at": "2026-04-20T14:09:21.500Z"
+  "updated_at": "2026-04-22T13:24:48.779Z"
 }

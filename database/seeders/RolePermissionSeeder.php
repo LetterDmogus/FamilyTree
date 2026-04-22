@@ -28,8 +28,10 @@ class RolePermissionSeeder extends Seeder
             'view_master', 'create_master', 'update_master', 'delete_master', 'access_trash_master',
             // Family Tree
             'manage_tree_all', 'delete_node_all', 'manage_tree_self',
+            // Global Settings
+            'manage_settings',
             // UI Basics
-            'view_dashboard'
+            'view_dashboard',
         ];
 
         foreach ($permissions as $permission) {
@@ -38,7 +40,7 @@ class RolePermissionSeeder extends Seeder
 
         // 2. Setup Super Admin
         $superAdminRole = Role::firstOrCreate(['name' => 'superadmin']);
-        // Super admin gets everything via Gate::before in AppServiceProvider, 
+        // Super admin gets everything via Gate::before in AppServiceProvider,
         // but we sync them anyway for clarity.
         $superAdminRole->syncPermissions($permissions);
 
@@ -49,14 +51,14 @@ class RolePermissionSeeder extends Seeder
             'view_roles',
             'view_master', 'create_master', 'update_master', 'delete_master',
             'manage_tree_all', 'delete_node_all',
-            'view_dashboard'
+            'view_dashboard',
         ]);
 
         // 4. Setup Member (Basic access)
         $memberRole = Role::firstOrCreate(['name' => 'member']);
         $memberRole->syncPermissions([
             'view_dashboard',
-            'manage_tree_self'
+            'manage_tree_self',
         ]);
 
         // 5. Ensure Super Admin User exists

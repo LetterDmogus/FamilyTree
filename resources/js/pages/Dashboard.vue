@@ -80,7 +80,7 @@ const welcomeMessage = computed(() => {
         <h1 class="text-3xl font-black text-gray-900 tracking-tight">{{ welcomeMessage }}!</h1>
         <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Ikhtisar Silsilah & Acara Mendatang</p>
       </div>
-      <Link href="/tree" class="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-xs tracking-tight hover:bg-indigo-700 transition-all shadow-lg flex items-center gap-2 group">
+      <Link href="/tree" class="px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold text-xs tracking-tight hover:bg-emerald-700 transition-all shadow-lg flex items-center gap-2 group">
         Buka Diagram Silsilah
         <ArrowRight class="w-4 h-4 group-hover:translate-x-1 transition-transform" />
       </Link>
@@ -112,11 +112,11 @@ const welcomeMessage = computed(() => {
         </div>
       </div>
 
-      <div v-if="oldestMember" class="bg-indigo-600 p-5 rounded-xl shadow-lg flex flex-col justify-between h-32 text-white">
-        <p class="text-[10px] font-bold text-indigo-200 uppercase tracking-wider">Living Legend</p>
+      <div v-if="oldestMember" class="bg-emerald-600 p-5 rounded-xl shadow-lg flex flex-col justify-between h-32 text-white">
+        <p class="text-[10px] font-bold text-emerald-200 uppercase tracking-wider">Living Legend</p>
         <div>
           <p class="text-sm font-black truncate leading-tight">{{ oldestMember.full_name }}</p>
-          <p class="text-[10px] font-bold text-indigo-300 mt-0.5 uppercase">{{ new Date().getFullYear() - new Date(oldestMember.birth_date).getFullYear() }} Tahun</p>
+          <p class="text-[10px] font-bold text-emerald-300 mt-0.5 uppercase">{{ new Date().getFullYear() - new Date(oldestMember.birth_date).getFullYear() }} Tahun</p>
         </div>
       </div>
     </div>
@@ -128,7 +128,7 @@ const welcomeMessage = computed(() => {
       <div class="xl:col-span-2 space-y-4">
         <div class="flex items-center justify-between px-2">
           <h3 class="text-sm font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
-            <CalendarIcon class="w-4 h-4 text-indigo-600" />
+            <CalendarIcon class="w-4 h-4 text-emerald-600" />
             Kalender Keluarga
           </h3>
           <div class="flex items-center gap-2 bg-white border border-gray-100 rounded-lg p-1">
@@ -147,8 +147,8 @@ const welcomeMessage = computed(() => {
           <!-- Calendar Days -->
           <div class="grid grid-cols-7 gap-px bg-gray-100 border border-gray-50">
             <div v-for="(day, idx) in daysInMonth" :key="idx" 
-              :class="['min-h-[90px] p-2 bg-white flex flex-col gap-1 transition-all', day.date ? 'hover:bg-indigo-50/30' : 'bg-gray-50/50']">
-              <span v-if="day.day" :class="['text-xs font-black w-6 h-6 flex items-center justify-center rounded-md', day.isToday ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400']">{{ day.day }}</span>
+              :class="['min-h-[90px] p-2 bg-white flex flex-col gap-1 transition-all', day.date ? 'hover:bg-emerald-50/30' : 'bg-gray-50/50']">
+              <span v-if="day.day" :class="['text-xs font-black w-6 h-6 flex items-center justify-center rounded-md', day.isToday ? 'bg-emerald-600 text-white shadow-md' : 'text-gray-400']">{{ day.day }}</span>
               
               <!-- Event Markers -->
               <div v-if="day.events?.length" class="flex flex-col gap-1 mt-1">
@@ -193,10 +193,10 @@ const welcomeMessage = computed(() => {
           </div>
 
           <div class="pt-6 border-t">
-             <div class="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
-                <p class="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-3">Highlight Bulan Ini</p>
+             <div class="p-4 bg-emerald-50/50 rounded-xl border border-emerald-100">
+                <p class="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] mb-3">Highlight Bulan Ini</p>
                 <div v-if="events.filter(e => e.month === (currentMonth + 1)).length" class="space-y-2">
-                   <p class="text-xs font-bold text-indigo-900 leading-relaxed">Terdapat <span class="text-indigo-600">{{ events.filter(e => e.month === (currentMonth + 1)).length }} acara</span> keluarga yang tercatat di kalender.</p>
+                   <p class="text-xs font-bold text-emerald-900 leading-relaxed">Terdapat <span class="text-emerald-600">{{ events.filter(e => e.month === (currentMonth + 1)).length }} acara</span> keluarga yang tercatat di kalender.</p>
                 </div>
                 <p v-else class="text-xs italic text-gray-400 font-medium">Tidak ada acara bulan ini.</p>
              </div>

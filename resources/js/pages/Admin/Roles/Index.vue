@@ -177,7 +177,7 @@ const submit = () => {
                 <div class="grid gap-4">
                     <div class="flex items-center justify-between px-1">
                         <Label class="text-xs font-bold text-gray-500">Izin Akses (Permissions)</Label>
-                        <Badge class="bg-indigo-50 text-indigo-600 border-none text-[10px] font-bold">{{ form.permissions.length }} Dipilih</Badge>
+                        <Badge class="bg-emerald-50 text-emerald-600 border-none text-[10px] font-bold">{{ form.permissions.length }} Dipilih</Badge>
                     </div>
 
                     <div class="grid grid-cols-1 gap-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
@@ -186,7 +186,7 @@ const submit = () => {
                             :key="permission.id" 
                             @click="togglePermission(permission.name, !form.permissions.includes(permission.name))"
                             :class="['flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-pointer group', 
-                                form.permissions.includes(permission.name) ? 'border-blue-600 bg-blue-50/50' : 'border-gray-50 bg-gray-50 hover:border-gray-200']"
+                                form.permissions.includes(permission.name) ? 'border-emerald-600 bg-emerald-50/50' : 'border-gray-50 bg-gray-50 hover:border-gray-200']"
                         >
                             <div class="flex items-center gap-3">
                                 <Checkbox
@@ -196,18 +196,18 @@ const submit = () => {
                                     @click.stop
                                     @update:checked="(val) => togglePermission(permission.name, val)"
                                 />
-                                <span :class="['text-sm font-bold transition-colors capitalize', form.permissions.includes(permission.name) ? 'text-blue-700' : 'text-gray-600']">
+                                <span :class="['text-sm font-bold transition-colors capitalize', form.permissions.includes(permission.name) ? 'text-emerald-700' : 'text-gray-600']">
                                     {{ permission.name.replace(/_/g, ' ') }}
                                 </span>
                             </div>
-                            <CheckCircle2 v-if="form.permissions.includes(permission.name)" class="h-5 w-5 text-blue-600 animate-in zoom-in duration-300" />
+                            <CheckCircle2 v-if="form.permissions.includes(permission.name)" class="h-5 w-5 text-emerald-600 animate-in zoom-in duration-300" />
                         </div>
                     </div>
                 </div>
             </div>
 
             <DialogFooter>
-                <Button type="submit" @click="submit" :disabled="form.processing" class="w-full py-7 bg-gray-900 text-white rounded-3xl font-bold text-sm hover:bg-blue-600 transition-all shadow-xl shadow-gray-100">
+                <Button type="submit" @click="submit" :disabled="form.processing" class="w-full py-7 bg-gray-900 text-white rounded-3xl font-bold text-sm hover:bg-emerald-600 transition-all shadow-xl shadow-gray-100">
                     {{ editingRole ? 'Simpan Perubahan' : 'Buat Peran Sekarang' }}
                 </Button>
             </DialogFooter>

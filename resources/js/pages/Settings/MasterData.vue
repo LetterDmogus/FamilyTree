@@ -83,10 +83,10 @@ const icons = [
       <!-- Main Tabs -->
       <div class="bg-white rounded-[2.5rem] shadow-xl border border-gray-100 overflow-hidden flex flex-col min-h-[60vh]">
         <div class="flex border-b border-gray-100 px-8 bg-gray-50/50">
-          <button @click="activeTab = 'sosmed'" :class="['px-8 py-6 text-xs font-black uppercase tracking-widest border-b-2 transition-all', activeTab === 'sosmed' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-600']">
+          <button @click="activeTab = 'sosmed'" :class="['px-8 py-6 text-xs font-black uppercase tracking-widest border-b-2 transition-all', activeTab === 'sosmed' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400 hover:text-gray-600']">
             Platform Sosial Media
           </button>
-          <button @click="activeTab = 'fields'" :class="['px-8 py-6 text-xs font-black uppercase tracking-widest border-b-2 transition-all', activeTab === 'fields' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-600']">
+          <button @click="activeTab = 'fields'" :class="['px-8 py-6 text-xs font-black uppercase tracking-widest border-b-2 transition-all', activeTab === 'fields' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400 hover:text-gray-600']">
             Bidang Data Profil
           </button>
         </div>
@@ -111,7 +111,7 @@ const icons = [
                     <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Prefix (Opsional)</label>
                     <input v-model="smForm.prefix" type="text" class="w-full px-4 py-3 bg-gray-50 border-2 border-transparent focus:border-blue-500 rounded-xl font-bold outline-none transition-all shadow-inner" placeholder="@ atau wa.me/" />
                   </div>
-                  <button type="submit" :disabled="smForm.processing" class="w-full py-4 bg-gray-900 text-white rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-blue-600 transition-all shadow-xl shadow-gray-200">Simpan Platform</button>
+                  <button type="submit" :disabled="smForm.processing" class="w-full py-4 bg-gray-900 text-white rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-emerald-600 transition-all shadow-xl shadow-gray-200">Simpan Platform</button>
                 </form>
               </div>
 
@@ -123,7 +123,7 @@ const icons = [
                     <div class="flex items-center gap-4">
                       <div class="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center p-2 overflow-hidden border border-gray-100">
                         <img v-if="sm.icon_url" :src="sm.icon_url" class="w-full h-full object-contain" />
-                        <span v-else class="font-black text-blue-600 text-xs">{{ sm.name.charAt(0) }}</span>
+                        <span v-else class="font-black text-emerald-600 text-xs">{{ sm.name.charAt(0) }}</span>
                       </div>
                       <div>
                         <p class="text-sm font-black text-gray-800">{{ sm.name }}</p>
@@ -166,7 +166,7 @@ const icons = [
                   <div>
                     <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Pilih Ikon</label>
                     <div class="grid grid-cols-4 gap-2">
-                      <button v-for="icon in icons" :key="icon.key" type="button" @click="fieldForm.icon_key = icon.key" :class="['p-3 rounded-xl border-2 transition-all flex items-center justify-center', fieldForm.icon_key === icon.key ? 'border-blue-600 bg-blue-50 text-blue-600 shadow-md' : 'border-gray-50 text-gray-400']">
+                      <button v-for="icon in icons" :key="icon.key" type="button" @click="fieldForm.icon_key = icon.key" :class="['p-3 rounded-xl border-2 transition-all flex items-center justify-center', fieldForm.icon_key === icon.key ? 'border-emerald-600 bg-emerald-50 text-emerald-600 shadow-md' : 'border-gray-50 text-gray-400']">
                         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                           <path :d="icon.path" />
                         </svg>

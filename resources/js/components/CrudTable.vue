@@ -153,7 +153,7 @@ const forceDeleteItem = (id: number) => {
                     <Select v-model="sort" @update:model-value="(val) => handleFilterChange('sort', val)">
                         <SelectTrigger class="w-full md:w-[160px] h-12 rounded-xl border-gray-100 bg-white font-bold text-xs shadow-sm">
                             <div class="flex items-center gap-2">
-                                <ArrowUpDown class="h-3.5 w-3.5 text-blue-600 stroke-[3]" />
+                                <ArrowUpDown class="h-3.5 w-3.5 text-emerald-600 stroke-[3]" />
                                 <SelectValue placeholder="Urutkan" />
                             </div>
                         </SelectTrigger>
@@ -192,8 +192,8 @@ const forceDeleteItem = (id: number) => {
                                 <div class="flex items-center gap-2">
                                     {{ column.label }}
                                     <ArrowUpDown v-if="column.sortable" class="h-3 w-3 opacity-30" />
-                                    <span v-if="column.sortable && filters.sort === column.key" class="text-blue-600">↑</span>
-                                    <span v-if="column.sortable && filters.sort === `-${column.key}`" class="text-blue-600">↓</span>
+                                    <span v-if="column.sortable && filters.sort === column.key" class="text-emerald-600">↑</span>
+                                    <span v-if="column.sortable && filters.sort === `-${column.key}`" class="text-emerald-600">↓</span>
                                 </div>
                             </th>
                             <th class="h-14 px-6 text-right align-middle font-bold text-xs tracking-tight">Aksi</th>
@@ -207,7 +207,7 @@ const forceDeleteItem = (id: number) => {
                                 </slot>
                             </td>
                             <td class="px-6 py-4 align-middle text-right">
-                                <div class="flex items-center justify-end gap-1.5 transition-all">
+                                <div v-if="!item.roles?.some((r: any) => r.name === 'superadmin')" class="flex items-center justify-end gap-1.5 transition-all">
                                     <Tooltip v-if="!item.deleted_at && can.update">
                                         <TooltipTrigger as-child><Button variant="outline" size="icon" class="w-8 h-8 rounded-lg text-sky-600 border-gray-100 hover:bg-sky-50 transition-all shadow-sm" @click="$emit('edit', item)"><PencilLine class="h-3.5 w-3.5 stroke-[2.5]" /></Button></TooltipTrigger>
                                         <TooltipContent side="top">Edit</TooltipContent>
@@ -228,6 +228,9 @@ const forceDeleteItem = (id: number) => {
                                         <TooltipTrigger as-child><Button variant="outline" size="icon" class="w-8 h-8 rounded-lg text-red-700 border-gray-100 hover:bg-red-50 transition-all shadow-sm" @click="forceDeleteItem(item.id)"><ShieldBan class="h-3.5 w-3.5 stroke-[2.5]" /></Button></TooltipTrigger>
                                         <TooltipContent side="top">Hapus Permanen</TooltipContent>
                                     </Tooltip>
+                                </div>
+                                <div v-else class="flex justify-end px-3">
+                                    <ShieldCheck class="w-4 h-4 text-emerald-600 opacity-30" title="Protected Account" />
                                 </div>
                             </td>
                         </tr>

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import FlashNotification from '@/components/FlashNotification.vue';
+import { Toaster } from '@/components/ui/sonner';
 import { home } from '@/routes';
 
 defineProps<{
@@ -39,5 +41,7 @@ defineProps<{
                 <slot />
             </div>
         </div>
+        <FlashNotification />
+        <Toaster />
     </div>
 </template>

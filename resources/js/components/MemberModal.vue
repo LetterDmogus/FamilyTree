@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useForm } from '@inertiajs/vue3'
+import { Share2 } from 'lucide-vue-next'
 
 const props = defineProps({
   mode: {
@@ -55,16 +56,19 @@ const form = useForm({
 
 onMounted(() => {
   if (props.mode === 'edit') {
-    form.full_name = props.member.full_name || ''
+    // Standardize data mapping regardless of source (Inertia prop or JSON API)
+    const profile = props.member.profile || props.member
+    
+    form.full_name = props.member.full_name || props.member.name || ''
     form.email = props.member.email || ''
-    form.gender = props.member.profile?.gender || 'M'
-    form.is_alive = props.member.profile?.is_alive ?? true
-    form.death_date = formatForInput(props.member.profile?.death_date)
-    form.birth_date = formatForInput(props.member.profile?.birth_date)
-    form.birth_place = props.member.profile?.birth_place || ''
-    form.additional_info = { ...(props.member.profile?.additional_info || {}) }
-    form.social_media = props.member.profile?.social_media || []
-    photoPreview.value = props.member.profile?.photo_url
+    form.gender = profile.gender || 'M'
+    form.is_alive = profile.is_alive ?? true
+    form.death_date = formatForInput(profile.death_date)
+    form.birth_date = formatForInput(profile.birth_date)
+    form.birth_place = profile.birth_place || ''
+    form.additional_info = { ...(profile.additional_info || {}) }
+    form.social_media = profile.social_media || []
+    photoPreview.value = profile.photo_url || profile.profile_photo_path ? `/storage/${profile.profile_photo_path}` : null
   }
 })
 
@@ -142,7 +146,7 @@ function submit() {
             {{ mode === 'create' ? 'Tambah Anggota' : 'Edit Anggota' }}
           </h2>
           <div class="flex items-center gap-2 mt-1">
-            <span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-black uppercase rounded-md border border-blue-100">
+            <span class="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase rounded-md border border-emerald-100">
               {{ mode === 'create' ? type : 'PROFIL' }}
             </span>
             <p class="text-xs text-gray-400 font-bold uppercase tracking-widest">
@@ -160,7 +164,7 @@ function submit() {
       <!-- Tab Strip -->
       <div class="flex px-8 bg-gray-50/50 border-b border-gray-100 flex-shrink-0">
         <button v-for="tab in ['utama', 'tambahan', 'sosmed']" :key="tab" @click="activeTab = tab" 
-          :class="['px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2', activeTab === tab ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-600']">
+          :class="['px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2', activeTab === tab ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400 hover:text-gray-600']">
           {{ tab }}
         </button>
       </div>
@@ -181,7 +185,7 @@ function submit() {
                     </svg>
                   </div>
                 </div>
-                <label class="absolute -bottom-2 -right-2 p-2 bg-blue-600 text-white rounded-xl shadow-xl cursor-pointer hover:bg-blue-700 transition-all hover:scale-110">
+                <label class="absolute -bottom-2 -right-2 p-2 bg-emerald-600 text-white rounded-xl shadow-xl cursor-pointer hover:bg-emerald-700 transition-all hover:scale-110">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                   </svg>
@@ -208,7 +212,7 @@ function submit() {
               <div>
                 <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Jenis Kelamin</label>
                 <div class="flex gap-2 p-1 bg-gray-50 rounded-2xl">
-                  <button type="button" @click="form.gender = 'M'" :class="['flex-1 py-3 text-xs font-black uppercase rounded-xl transition-all', form.gender === 'M' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400']">Laki-laki</button>
+                  <button type="button" @click="form.gender = 'M'" :class="['flex-1 py-3 text-xs font-black uppercase rounded-xl transition-all', form.gender === 'M' ? 'bg-white shadow-sm text-emerald-600' : 'text-gray-400']">Laki-laki</button>
                   <button type="button" @click="form.gender = 'F'" :class="['flex-1 py-3 text-xs font-black uppercase rounded-xl transition-all', form.gender === 'F' ? 'bg-white shadow-sm text-pink-600' : 'text-gray-400']">Perempuan</button>
                 </div>
               </div>
@@ -241,7 +245,7 @@ function submit() {
           <!-- TAB 2: TAMBAHAN -->
           <div v-if="activeTab === 'tambahan'" class="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
             <!-- Search-Select Field Builder -->
-            <div class="relative">
+            <div v-if="master.settings?.allow_custom_metadata !== false" class="relative">
               <div class="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-xl border-2 border-gray-100">
                 <div class="pl-4 text-gray-400">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
@@ -253,7 +257,7 @@ function submit() {
               
               <!-- Results dropdown -->
               <div v-if="fieldSearch" class="absolute top-full mt-2 w-full bg-white rounded-2xl shadow-2xl border border-gray-100 z-30 p-2 max-h-48 overflow-y-auto">
-                <button v-for="field in filteredMasterFields" :key="field.id" type="button" @click="addAdditionalField(field)" class="w-full px-4 py-3 text-left text-[10px] font-black uppercase text-gray-500 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition-all">
+                <button v-for="field in filteredMasterFields" :key="field.id" type="button" @click="addAdditionalField(field)" class="w-full px-4 py-3 text-left text-[10px] font-black uppercase text-gray-500 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition-all">
                   {{ field.name }} ({{ field.input_type }})
                 </button>
                 <div v-if="filteredMasterFields.length === 0" class="p-4 text-center text-[10px] font-black text-gray-300 uppercase">Tidak ditemukan</div>
@@ -265,12 +269,12 @@ function submit() {
               <div v-for="(value, fieldName) in form.additional_info" :key="fieldName" class="group bg-gray-50 p-5 rounded-3xl border-2 border-transparent hover:border-gray-200 transition-all text-left">
                 <div class="flex items-center justify-between mb-4">
                   <div class="flex items-center gap-2">
-                    <div class="w-6 h-6 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">
+                    <div class="w-6 h-6 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center">
                       <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
                         <path :d="icons[master.additionalFields.find(f => f.name === fieldName)?.icon_key] || icons.user" />
                       </svg>
                     </div>
-                    <label class="text-[10px] font-black text-blue-600 uppercase tracking-widest">{{ fieldName }}</label>
+                    <label class="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{{ fieldName }}</label>
                   </div>
                   <button type="button" @click="removeAdditionalField(fieldName)" class="text-red-400 hover:text-red-600 p-1 opacity-0 group-hover:opacity-100 transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -359,7 +363,7 @@ function submit() {
         <button type="button" @click="$emit('close')" class="flex-1 px-6 py-5 border-2 border-gray-100 text-gray-400 rounded-3xl font-black uppercase text-[10px] hover:bg-gray-50 hover:text-gray-600 transition-all tracking-widest">
           Batal
         </button>
-        <button @click="submit" :disabled="form.processing" class="flex-[2] px-6 py-5 bg-gray-900 text-white rounded-3xl font-black uppercase text-[10px] hover:bg-blue-600 transition-all tracking-widest disabled:opacity-50 shadow-xl shadow-gray-200">
+        <button @click="submit" :disabled="form.processing" class="flex-[2] px-6 py-5 bg-gray-900 text-white rounded-3xl font-black uppercase text-[10px] hover:bg-emerald-600 transition-all tracking-widest disabled:opacity-50 shadow-xl shadow-gray-200">
           {{ form.processing ? 'Sedang Menyimpan...' : (mode === 'create' ? 'Simpan Anggota Baru' : 'Simpan Perubahan') }}
         </button>
       </div>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Database, LayoutGrid, Network, Share2, ShieldCheck, Users } from 'lucide-vue-next';
+import { BrainCircuit, Database, LayoutGrid, Network, Share2, ShieldCheck, Users } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -72,6 +72,14 @@ const adminNavItems = computed<NavItem[]>(() => {
             title: 'Data Details',
             href: admin.dataDetails.index.url(),
             icon: Database,
+        });
+    }
+
+    if (permissions.value.includes('manage_settings')) {
+        items.push({
+            title: 'Wise Tree Rules',
+            href: admin.settings.wiseTree.index.url(),
+            icon: BrainCircuit,
         });
     }
 

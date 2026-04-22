@@ -15,6 +15,7 @@ const { appearance } = useAppearance();
             '--normal-bg': 'var(--popover)',
             '--normal-text': 'var(--popover-foreground)',
             '--normal-border': 'var(--border)',
+            'z-index': '9999'
         }"
     />
 </template>
