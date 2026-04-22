@@ -18,23 +18,48 @@ class RolePermissionSeeder extends Seeder
         // Reset cached roles and permissions
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Create permissions if they don't exist
-        $permissions = ['manage_roles', 'manage_users', 'manage_master_data', 'view_dashboard'];
+        // 1. Define All Granular Permissions
+        $permissions = [
+            // User Management
+            'view_users', 'create_users', 'update_users', 'delete_users', 'access_trash_users',
+            // Role Management
+            'view_roles', 'create_roles', 'update_roles', 'delete_roles',
+            // Master Data
+            'view_master', 'create_master', 'update_master', 'delete_master', 'access_trash_master',
+            // Family Tree
+            'manage_tree_all', 'delete_node_all', 'manage_tree_self',
+            // UI Basics
+            'view_dashboard'
+        ];
+
         foreach ($permissions as $permission) {
             Permission::firstOrCreate(['name' => $permission]);
         }
 
-        // Create roles and assign permissions
+        // 2. Setup Super Admin
         $superAdminRole = Role::firstOrCreate(['name' => 'superadmin']);
-        $superAdminRole->syncPermissions(['manage_roles', 'manage_users', 'manage_master_data', 'view_dashboard']);
+        // Super admin gets everything via Gate::before in AppServiceProvider, 
+        // but we sync them anyway for clarity.
+        $superAdminRole->syncPermissions($permissions);
 
+        // 3. Setup Admin (Limited Recycle Bin access by default)
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $adminRole->syncPermissions(['manage_users', 'manage_master_data', 'view_dashboard']);
+        $adminRole->syncPermissions([
+            'view_users', 'create_users', 'update_users', 'delete_users',
+            'view_roles',
+            'view_master', 'create_master', 'update_master', 'delete_master',
+            'manage_tree_all', 'delete_node_all',
+            'view_dashboard'
+        ]);
 
+        // 4. Setup Member (Basic access)
         $memberRole = Role::firstOrCreate(['name' => 'member']);
-        $memberRole->syncPermissions(['view_dashboard']);
+        $memberRole->syncPermissions([
+            'view_dashboard',
+            'manage_tree_self'
+        ]);
 
-        // Create a test user and assign superadmin role
+        // 5. Ensure Super Admin User exists
         $user = User::where('email', 'superadmin@example.com')->first();
         if (! $user) {
             $user = User::factory()->create([

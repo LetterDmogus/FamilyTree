@@ -26,6 +26,12 @@ const props = defineProps<{
     };
     filters: any;
     roles: Array<{ id: number; name: string }>;
+    can: {
+        create: boolean;
+        update: boolean;
+        delete: boolean;
+        access_trash: boolean;
+    }
 }>();
 
 defineOptions({
@@ -102,6 +108,7 @@ function getRoleColor(role: string) {
             :columns="columns"
             :filters="filters"
             :routes="routes"
+            :can="can"
             show-reset-password
             @edit="handleEdit"
             @reset-password="handleResetPassword"

@@ -46,20 +46,27 @@ const props = withDefaults(defineProps<{
         restore?: (id: any) => string;
         forceDestroy?: (id: any) => string;
     };
-    showEdit?: boolean;
+    can?: {
+        create?: boolean;
+        update?: boolean;
+        delete?: boolean;
+        access_trash?: boolean;
+    };
     showResetPassword?: boolean;
 }>(), {
-    showEdit: true,
     showResetPassword: false,
+    can: () => ({
+        create: true,
+        update: true,
+        delete: true,
+        access_trash: true
+    })
 });
 
 const emit = defineEmits<{
     edit: [item: any];
     resetPassword: [item: any];
 }>();
-
-const page = usePage();
-const isSuperAdmin = computed(() => (page.props.auth.roles as string[]).includes('superadmin'));
 
 const search = ref(props.filters.search || '');
 const trashed = ref(props.filters.trashed || 'active');
@@ -112,9 +119,14 @@ const forceDeleteItem = (id: number) => {
 <template>
     <TooltipProvider>
         <div class="flex w-full flex-col gap-8 select-none font-sans">
-            <div class="flex flex-col gap-1.5">
-                <h2 class="text-3xl font-black tracking-tight text-gray-900">{{ title }}</h2>
-                <p v-if="description" class="text-sm font-medium text-gray-400">{{ description }}</p>
+            <div class="flex flex-col gap-1.5 justify-between md:flex-row md:items-end">
+                <div>
+                    <h2 class="text-3xl font-black tracking-tight text-gray-900">{{ title }}</h2>
+                    <p v-if="description" class="text-sm font-medium text-gray-400">{{ description }}</p>
+                </div>
+                <div v-if="can.create">
+                    <slot name="header-actions"></slot>
+                </div>
             </div>
 
             <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -154,7 +166,7 @@ const forceDeleteItem = (id: number) => {
                     </Select>
 
                     <!-- Recycle Bin -->
-                    <Select v-model="trashed" @update:model-value="(val) => handleFilterChange('trashed', val)">
+                    <Select v-if="can.access_trash" v-model="trashed" @update:model-value="(val) => handleFilterChange('trashed', val)">
                         <SelectTrigger class="w-full md:w-[160px] h-12 rounded-xl border-gray-100 bg-white font-bold text-xs shadow-sm">
                             <div class="flex items-center gap-2">
                                 <Trash2 class="h-3.5 w-3.5 text-rose-500 stroke-[3]" />
@@ -196,23 +208,23 @@ const forceDeleteItem = (id: number) => {
                             </td>
                             <td class="px-6 py-4 align-middle text-right">
                                 <div class="flex items-center justify-end gap-1.5 transition-all">
-                                    <Tooltip v-if="!item.deleted_at && showEdit">
+                                    <Tooltip v-if="!item.deleted_at && can.update">
                                         <TooltipTrigger as-child><Button variant="outline" size="icon" class="w-8 h-8 rounded-lg text-sky-600 border-gray-100 hover:bg-sky-50 transition-all shadow-sm" @click="$emit('edit', item)"><PencilLine class="h-3.5 w-3.5 stroke-[2.5]" /></Button></TooltipTrigger>
                                         <TooltipContent side="top">Edit</TooltipContent>
                                     </Tooltip>
-                                    <Tooltip v-if="!item.deleted_at && showResetPassword">
+                                    <Tooltip v-if="!item.deleted_at && showResetPassword && can.update">
                                         <TooltipTrigger as-child><Button variant="outline" size="icon" class="w-8 h-8 rounded-lg text-amber-600 border-gray-100 hover:bg-amber-50 transition-all shadow-sm" @click="$emit('resetPassword', item)"><KeyRound class="h-3.5 w-3.5 stroke-[2.5]" /></Button></TooltipTrigger>
                                         <TooltipContent side="top">Reset Password</TooltipContent>
                                     </Tooltip>
-                                    <Tooltip v-if="!item.deleted_at && routes.destroy">
+                                    <Tooltip v-if="!item.deleted_at && routes.destroy && can.delete">
                                         <TooltipTrigger as-child><Button variant="outline" size="icon" class="w-8 h-8 rounded-lg text-rose-600 border-gray-100 hover:bg-rose-50 transition-all shadow-sm" @click="deleteItem(item.id)"><Trash2 class="h-3.5 w-3.5 stroke-[2.5]" /></Button></TooltipTrigger>
                                         <TooltipContent side="top">Hapus</TooltipContent>
                                     </Tooltip>
-                                    <Tooltip v-if="item.deleted_at && routes.restore">
+                                    <Tooltip v-if="item.deleted_at && routes.restore && can.access_trash">
                                         <TooltipTrigger as-child><Button variant="outline" size="icon" class="w-8 h-8 rounded-lg text-emerald-600 border-gray-100 hover:bg-emerald-50 transition-all shadow-sm" @click="restoreItem(item.id)"><RotateCcw class="h-3.5 w-3.5 stroke-[2.5]" /></Button></TooltipTrigger>
                                         <TooltipContent side="top">Pulihkan</TooltipContent>
                                     </Tooltip>
-                                    <Tooltip v-if="item.deleted_at && isSuperAdmin && routes.forceDestroy">
+                                    <Tooltip v-if="item.deleted_at && routes.forceDestroy && can.access_trash">
                                         <TooltipTrigger as-child><Button variant="outline" size="icon" class="w-8 h-8 rounded-lg text-red-700 border-gray-100 hover:bg-red-50 transition-all shadow-sm" @click="forceDeleteItem(item.id)"><ShieldBan class="h-3.5 w-3.5 stroke-[2.5]" /></Button></TooltipTrigger>
                                         <TooltipContent side="top">Hapus Permanen</TooltipContent>
                                     </Tooltip>

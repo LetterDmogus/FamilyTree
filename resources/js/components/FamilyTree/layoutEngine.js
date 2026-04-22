@@ -15,22 +15,26 @@ export function computeLayout(rootNode, options = {}) {
 
   // Step 1: Calculate total width needed for each subtree (Post-order)
   function calculateSubtreeWidth(node) {
-    const children = node.children || []
+    // Collect all children from the main node and all spouses
+    const directChildren = node.children || []
+    const spouseChildren = (node.spouse || []).flatMap(s => s.children || [])
+    const allChildren = [...directChildren, ...spouseChildren]
+    node._allChildren = allChildren
     
     // Width of the parent row: [Bio] -- [Spouse1] -- [Spouse2]
     const spouseCount = node.spouse?.length || 0
     const selfRowWidth = nodeWidth + spouseCount * (spouseGap + nodeWidth)
 
-    if (children.length === 0) {
+    if (allChildren.length === 0) {
       node._subtreeWidth = selfRowWidth
       return selfRowWidth
     }
 
     // Width of the children row: Sum of subtrees + gaps
     let childrenRowWidth = 0
-    children.forEach((child, index) => {
+    allChildren.forEach((child, index) => {
       childrenRowWidth += calculateSubtreeWidth(child)
-      if (index < children.length - 1) {
+      if (index < allChildren.length - 1) {
         childrenRowWidth += gapX
       }
     })
@@ -45,7 +49,7 @@ export function computeLayout(rootNode, options = {}) {
 
   // Step 2: Assign absolute coordinates (Pre-order)
   function assignPositions(node, startX, depth) {
-    const children = node.children || []
+    const allChildren = node._allChildren || []
     const y = depth * gapY
     
     const slotWidth = node._subtreeWidth
@@ -78,10 +82,10 @@ export function computeLayout(rootNode, options = {}) {
       })
     }
 
-    // Recurse for children
-    if (children.length > 0) {
+    // Recurse for all aggregated children
+    if (allChildren.length > 0) {
       let currentChildX = childrenStartX
-      children.forEach(child => {
+      allChildren.forEach(child => {
         assignPositions(child, currentChildX, depth + 1)
         currentChildX += child._subtreeWidth + gapX
       })

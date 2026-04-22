@@ -1,12 +1,12 @@
 {
-  "last_session_id": "c76a0c40-20e7-43b5-a366-60b28375b13e",
-  "last_event_key": "c76a0c40-20e7-43b5-a366-60b28375b13e:transcript:7bb09718e77972df8476ee0e828521f866779a58e5a42dcb067654c0e0f0cef4",
-  "last_prompted_session_id": "c76a0c40-20e7-43b5-a366-60b28375b13e",
+  "last_session_id": "f0bea983-cd4d-4dcc-bfae-3973cfdc7eb5",
+  "last_event_key": "f0bea983-cd4d-4dcc-bfae-3973cfdc7eb5:transcript:85b5f3249ee7d49c1ce8d1683951a02ad591f7e52bdbd1489071ca8526bf4dbd",
+  "last_prompted_session_id": "f0bea983-cd4d-4dcc-bfae-3973cfdc7eb5",
   "last_reason": "already-prompted-this-session",
-  "last_prompted_at": "2026-04-19T09:43:40.832Z",
-  "last_user_message_count": 11,
+  "last_prompted_at": "2026-04-20T13:16:45.359Z",
+  "last_user_message_count": 21,
   "last_actionable_message_count": 4,
   "deep_interview_lock_active": false,
   "deep_interview_lock_source": "/home/floaty/Documents/Laravel/family-tree/.omg/state/deep-interview.json",
-  "updated_at": "2026-04-19T10:51:10.915Z"
+  "updated_at": "2026-04-20T14:09:21.500Z"
 }
