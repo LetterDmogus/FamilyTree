@@ -9,5 +9,5 @@ const props = defineProps<{
 </script>
 
 <template>
-  <Trees :class="cn('w-full h-full text-indigo-600 stroke-[2.5]', props.class)" />
+  <Trees :class="cn('w-full h-full text-emerald-600 stroke-[2.5]', props.class)" />
 </template>

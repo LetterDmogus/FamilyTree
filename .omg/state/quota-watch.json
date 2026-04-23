@@ -1,12 +1,12 @@
 {
-  "turn_count": 25,
-  "last_session_id": "f0bea983-cd4d-4dcc-bfae-3973cfdc7eb5",
-  "last_event_key": "f0bea983-cd4d-4dcc-bfae-3973cfdc7eb5:transcript:85b5f3249ee7d49c1ce8d1683951a02ad591f7e52bdbd1489071ca8526bf4dbd",
-  "last_transcript_hash": "85b5f3249ee7d49c1ce8d1683951a02ad591f7e52bdbd1489071ca8526bf4dbd",
+  "turn_count": 39,
+  "last_session_id": "6b814dcf-c622-45aa-b0a9-2e896007bba7",
+  "last_event_key": "6b814dcf-c622-45aa-b0a9-2e896007bba7:transcript:b2bfbb6febcfa15a33a284232b26efa1f9b5ab602399d3ee152f63fb64c97ebe",
+  "last_transcript_hash": "b2bfbb6febcfa15a33a284232b26efa1f9b5ab602399d3ee152f63fb64c97ebe",
   "last_model": "gemini-3-flash-preview",
-  "last_turn_total_tokens": 199815,
-  "last_session_total_tokens": 13768254,
+  "last_turn_total_tokens": 190713,
+  "last_session_total_tokens": 21863169,
   "cwd_mode": "parent-leaf",
   "last_cwd_label": "Laravel/family-tree",
-  "updated_at": "2026-04-20T14:09:21.556Z"
+  "updated_at": "2026-04-23T01:49:45.969Z"
 }

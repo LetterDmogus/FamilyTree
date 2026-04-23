@@ -30,7 +30,7 @@ class DataDetailController extends Controller
 
         $items = QueryBuilder::for(MasterAdditionalField::class)
             ->allowedFilters(
-                AllowedFilter::partial('name'),
+                AllowedFilter::scope('search'),
                 AllowedFilter::exact('group_name'),
                 AllowedFilter::trashed(),
             )
@@ -47,7 +47,7 @@ class DataDetailController extends Controller
                 'update' => auth()->user()->can('update_master'),
                 'delete' => auth()->user()->can('delete_master'),
                 'access_trash' => $canAccessTrash,
-            ]
+            ],
         ]);
     }
 

@@ -92,7 +92,7 @@ const handleResetPassword = (user: any) => {
 
 function getRoleColor(role: string) {
     if (role === 'superadmin') return 'bg-rose-600 text-white border-none'
-    if (role === 'admin') return 'bg-indigo-600 text-white border-none'
+    if (role === 'admin') return 'bg-emerald-600 text-white border-none'
     return 'bg-slate-100 text-slate-600 border-none'
 }
 </script>
@@ -141,7 +141,7 @@ function getRoleColor(role: string) {
                             <Skull v-else class="w-2.5 h-2.5" />
                             {{ item.profile?.is_alive ? 'Hidup' : 'Wafat' }}
                         </Badge>
-                        <Badge :class="item.profile?.gender === 'F' ? 'bg-pink-50 text-pink-500 border-pink-100' : 'bg-blue-50 text-blue-500 border-blue-100'" class="text-[9px] font-black uppercase px-2 py-0.5 rounded-md border shadow-none flex items-center gap-1">
+                        <Badge :class="item.profile?.gender === 'F' ? 'bg-pink-50 text-pink-500 border-pink-100' : 'bg-emerald-50 text-blue-500 border-emerald-100'" class="text-[9px] font-black uppercase px-2 py-0.5 rounded-md border shadow-none flex items-center gap-1">
                             <component :is="item.profile?.gender === 'F' ? Venus : Mars" class="w-2.5 h-2.5 stroke-[3]" />
                             {{ item.profile?.gender === 'F' ? 'P' : 'L' }}
                         </Badge>
@@ -197,7 +197,7 @@ function getRoleColor(role: string) {
                 </div>
             </div>
             <DialogFooter>
-                <Button type="submit" @click="submit" :disabled="form.processing" class="w-full py-6 bg-gray-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-blue-600 transition-all shadow-xl shadow-gray-100">
+                <Button type="submit" @click="submit" :disabled="form.processing" class="w-full py-6 bg-gray-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-emerald-600 transition-all shadow-xl shadow-gray-100">
                     Simpan Perubahan
                 </Button>
             </DialogFooter>

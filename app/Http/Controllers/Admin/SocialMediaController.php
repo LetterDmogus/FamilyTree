@@ -30,7 +30,7 @@ class SocialMediaController extends Controller
 
         $items = QueryBuilder::for(MasterSocialMedia::class)
             ->allowedFilters(
-                AllowedFilter::partial('name'),
+                AllowedFilter::scope('search'),
                 AllowedFilter::trashed(),
             )
             ->allowedSorts('name', 'created_at')
@@ -46,7 +46,7 @@ class SocialMediaController extends Controller
                 'update' => auth()->user()->can('update_master'),
                 'delete' => auth()->user()->can('delete_master'),
                 'access_trash' => $canAccessTrash,
-            ]
+            ],
         ]);
     }
 

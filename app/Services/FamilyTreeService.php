@@ -36,7 +36,7 @@ class FamilyTreeService
     private function buildNode(User $user, User $viewingUser, int $currentDepth, int $maxDepth): array
     {
         $profile = $this->allProfiles->where('user_id', $user->id)->first();
-        $isAdmin = $user->roles->whereIn('name', ['admin', 'superadmin'])->isNotEmpty();
+        $isAdmin = $user->can('manage_tree_all');
 
         $node = [
             'id' => (int) $user->id,
@@ -71,7 +71,7 @@ class FamilyTreeService
             }
 
             $sProfile = $this->allProfiles->where('user_id', $spouse->id)->first();
-            $sIsAdmin = $spouse->roles->whereIn('name', ['admin', 'superadmin'])->isNotEmpty();
+            $sIsAdmin = $spouse->can('manage_tree_all');
 
             // Find children that belong to BOTH this user and this spouse
             $commonChildrenRels = $this->allRelations
@@ -91,9 +91,9 @@ class FamilyTreeService
                         ->where('related_user_id', $child->id)
                         ->where('type', 'child')
                         ->first();
-                    
+
                     $childNode['is_blood'] = (bool) ($myRelToChild->is_blood ?? true);
-                    
+
                     $spouseChildren[] = $childNode;
                     // Mark as "handled" so they don't appear in the main children list
                     $myChildrenIds = array_diff($myChildrenIds, [$child->id]);

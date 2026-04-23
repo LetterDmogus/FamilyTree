@@ -25,7 +25,8 @@ import {
   Home,
   Mail,
   Phone,
-  Book
+  Book,
+  Share2
 } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -33,7 +34,7 @@ const props = defineProps({
   rootId: { type: Number, required: true }
 })
 
-const emit = defineEmits(['add-relation', 'edit-profile', 'close'])
+const emit = defineEmits(['add-relation', 'edit-profile', 'close', 'node-click'])
 
 const details = ref(null)
 const activeTab = ref('info')
@@ -57,6 +58,11 @@ const canDelete = computed(() => {
 const canToggleAdmin = computed(() => {
   if (!details.value) return false
   return details.value.can?.toggle_admin
+})
+
+const canSetHead = computed(() => {
+  if (!details.value) return false
+  return details.value.can?.set_head
 })
 
 const masterFields = computed(() => page.props.master?.additionalFields || [])
@@ -123,7 +129,7 @@ const age = computed(() => {
 })
 
 const bannerColor = computed(() => {
-  const colors = ['from-blue-400 to-indigo-500', 'from-pink-400 to-rose-500', 'from-emerald-400 to-teal-500', 'from-amber-400 to-orange-500']
+  const colors = ['from-emerald-400 to-teal-500', 'from-pink-400 to-rose-500', 'from-emerald-400 to-teal-500', 'from-amber-400 to-orange-500']
   return colors[props.node.id % colors.length]
 })
 
@@ -135,6 +141,14 @@ function fetchDetails() {
 
 function handleToggleAdmin() {
   router.post(`/api/users/${props.node.id}/toggle-admin`, {}, { onSuccess: () => fetchDetails() })
+}
+
+function handleToggleFamilyHead() {
+  const isHead = details.value.profile?.is_family_head
+  const action = isHead ? 'Mencabut status' : 'Menjadikan'
+  if (confirm(`${action} Kepala Keluarga untuk ${details.value.full_name}?`)) {
+    router.post(`/api/users/${props.node.id}/toggle-head`, {}, { onSuccess: () => fetchDetails() })
+  }
 }
 
 function deleteMember() {
@@ -160,7 +174,7 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
               {{ node.panggilan.substring(0, 2).toUpperCase() }}
             </div>
           </div>
-          <div v-if="details?.is_admin" class="absolute -top-1 -right-1 w-8 h-8 bg-indigo-600 border-4 border-white rounded-full flex items-center justify-center text-white"><Shield class="w-3.5 h-3.5 fill-current" /></div>
+          <div v-if="details?.is_admin" class="absolute -top-1 -right-1 w-8 h-8 bg-emerald-600 border-4 border-white rounded-full flex items-center justify-center text-white"><Shield class="w-3.5 h-3.5 fill-current" /></div>
         </div>
         <div class="mb-2 ml-4">
           <h2 class="text-xl font-black tracking-tight text-gray-900 leading-none drop-shadow-sm">{{ details?.full_name || node.full_name }}</h2>
@@ -178,7 +192,7 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
     <div class="px-6 flex border-b bg-gray-50/50">
       <button v-for="tab in ['info', 'settings']" :key="tab" @click="activeTab = tab"
         :class="['px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2', 
-          activeTab === tab ? 'border-indigo-600 text-indigo-600 bg-white' : 'border-transparent text-gray-400 hover:text-gray-600']">
+          activeTab === tab ? 'border-emerald-600 text-emerald-600 bg-white' : 'border-transparent text-gray-400 hover:text-gray-600']">
         {{ tab === 'info' ? 'Biodata' : 'Kelola' }}
       </button>
     </div>
@@ -186,7 +200,7 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
     <!-- Content -->
     <div class="flex-1 overflow-y-auto custom-scrollbar">
       <div v-if="!details" class="p-12 flex flex-col items-center justify-center text-center space-y-4 opacity-30">
-        <div class="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        <div class="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
         <p class="text-[10px] font-black uppercase tracking-widest">Memuat Data...</p>
       </div>
 
@@ -214,13 +228,13 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
 
           <!-- Basic Info -->
           <div class="space-y-6">
-            <div class="flex items-center gap-2 px-1 text-indigo-600">
+            <div class="flex items-center gap-2 px-1 text-emerald-600">
               <Info class="w-4 h-4" />
               <span class="text-[10px] font-black uppercase tracking-widest">Informasi Dasar</span>
             </div>
             <div class="space-y-5 px-1">
               <div v-if="details.profile.birth_date" class="flex gap-4">
-                <div class="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-500 flex-shrink-0"><Calendar class="w-5 h-5" /></div>
+                <div class="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-500 flex-shrink-0"><Calendar class="w-5 h-5" /></div>
                 <div>
                   <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Lahir</label>
                   <p class="text-xs font-bold text-gray-700">{{ formatDate(details.profile.birth_date) }}</p>
@@ -242,7 +256,7 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
                 </div>
               </div>
               <div class="flex gap-4">
-                <div class="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-500 flex-shrink-0"><Mail class="w-5 h-5" /></div>
+                <div class="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-500 flex-shrink-0"><Mail class="w-5 h-5" /></div>
                 <div>
                   <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Email</label>
                   <p class="text-xs font-bold text-gray-700">{{ details.email }}</p>
@@ -258,8 +272,8 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
               <span class="text-[10px] font-black uppercase tracking-widest">{{ group }}</span>
             </div>
             <div class="grid gap-4">
-               <div v-for="field in fields" :key="field.label" class="bg-white border-2 border-gray-50 p-4 rounded-3xl flex items-center gap-4 hover:border-indigo-100 transition-all group">
-                  <div class="w-10 h-10 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-all">
+               <div v-for="field in fields" :key="field.label" class="bg-white border-2 border-gray-50 p-4 rounded-3xl flex items-center gap-4 hover:border-emerald-100 transition-all group">
+                  <div class="w-10 h-10 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-emerald-50 group-hover:text-emerald-500 transition-all">
                     <component :is="iconsMap[field.icon] || UserIcon" class="w-5 h-5" />
                   </div>
                   <div>
@@ -284,6 +298,48 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
               </a>
             </div>
           </div>
+
+          <!-- Direct Relations (Line Details) -->
+          <div class="space-y-6 pt-4 border-t border-dashed">
+            <div class="flex items-center gap-2 px-1 text-emerald-600">
+              <Share2 class="w-4 h-4 rotate-90" />
+              <span class="text-[10px] font-black uppercase tracking-widest">Garis Keturunan Langsung</span>
+            </div>
+            
+            <div class="grid gap-3 px-1">
+              <!-- Spouse(s) -->
+              <div v-if="node.spouse?.length" class="flex flex-col gap-2">
+                <p class="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Pasangan</p>
+                <div v-for="s in node.spouse" :key="s.id" @click="$emit('node-click', s)" 
+                  class="flex items-center gap-3 p-3 bg-rose-50/50 rounded-2xl border border-rose-100 hover:bg-rose-100 transition-all cursor-pointer">
+                  <div class="w-8 h-8 rounded-full bg-white border-2 border-rose-200 flex items-center justify-center overflow-hidden">
+                    <img v-if="s.photo_url" :src="s.photo_url" class="w-full h-full object-cover" />
+                    <span v-else class="text-[10px] font-black text-rose-300">{{ s.full_name.charAt(0) }}</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-[10px] font-black text-rose-900 truncate uppercase">{{ s.full_name }}</p>
+                    <p class="text-[8px] font-bold text-rose-400 uppercase tracking-tighter">Pasangan Terdaftar</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Children -->
+              <div v-if="node.children?.length" class="flex flex-col gap-2">
+                <p class="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Keturunan (Anak)</p>
+                <div v-for="c in node.children" :key="c.id" @click="$emit('node-click', c)" 
+                  class="flex items-center gap-3 p-3 bg-emerald-50/50 rounded-2xl border border-emerald-100 hover:bg-emerald-100 transition-all cursor-pointer">
+                  <div class="w-8 h-8 rounded-full bg-white border-2 border-emerald-200 flex items-center justify-center overflow-hidden">
+                    <img v-if="c.photo_url" :src="c.photo_url" class="w-full h-full object-cover" />
+                    <span v-else class="text-[10px] font-black text-emerald-300">{{ c.full_name.charAt(0) }}</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-[10px] font-black text-emerald-900 truncate uppercase">{{ c.full_name }}</p>
+                    <p class="text-[8px] font-bold text-emerald-400 uppercase tracking-tighter">Generasi Berikutnya</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Tab: Settings -->
@@ -293,15 +349,15 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
           <div v-if="canManage" class="space-y-4 animate-in slide-in-from-top-4 duration-500">
             <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] px-1">Koneksi Silsilah</h3>
             <div class="grid gap-3">
-              <button @click="$emit('add-relation', { node, type: 'parent' })" class="w-full p-5 bg-white border-2 border-gray-50 rounded-[2rem] flex items-center justify-between hover:border-indigo-600 hover:shadow-xl transition-all group">
+              <button @click="$emit('add-relation', { node, type: 'parent' })" class="w-full p-5 bg-white border-2 border-gray-50 rounded-[2rem] flex items-center justify-between hover:border-emerald-600 hover:shadow-xl transition-all group">
                 <div class="flex items-center gap-4">
-                  <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform"><ArrowUpCircle class="w-5 h-5" /></div>
+                  <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform"><ArrowUpCircle class="w-5 h-5" /></div>
                   <div class="text-left">
                     <p class="text-xs font-black text-gray-900 uppercase">Tambah Orang Tua</p>
                     <p class="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Ayah atau Ibu</p>
                   </div>
                 </div>
-                <PlusCircle class="w-4 h-4 text-gray-200 group-hover:text-indigo-600 transition-colors" />
+                <PlusCircle class="w-4 h-4 text-gray-200 group-hover:text-emerald-600 transition-colors" />
               </button>
 
               <button @click="$emit('add-relation', { node, type: 'spouse' })" class="w-full p-5 bg-white border-2 border-gray-50 rounded-[2rem] flex items-center justify-between hover:border-rose-500 hover:shadow-xl transition-all group">
@@ -332,12 +388,17 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
           <div class="space-y-4 pt-4 border-t border-dashed">
             <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] px-1">Kontrol Keanggotaan</h3>
             <div class="grid gap-3">
-              <button @click="$emit('edit-profile', details)" v-if="canManage" class="w-full py-4 bg-gray-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg flex items-center justify-center gap-3">
+              <button @click="$emit('edit-profile', details)" v-if="canManage" class="w-full py-4 bg-gray-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg flex items-center justify-center gap-3">
                 <PenLine class="w-4 h-4" /> Edit Profil Anggota
               </button>
               
-              <button v-if="canToggleAdmin" @click="handleToggleAdmin" :class="['w-full py-3 rounded-2xl text-[10px] font-black uppercase transition-all shadow-lg', details.is_admin ? 'bg-white text-red-600 border-2 border-red-50 hover:bg-red-50' : 'bg-indigo-600 text-white hover:bg-indigo-700']">
+              <button v-if="canToggleAdmin && !isOwnAccount && !details.is_admin" @click="handleToggleAdmin" :class="['w-full py-3 rounded-2xl text-[10px] font-black uppercase transition-all shadow-lg', details.is_admin ? 'bg-white text-red-600 border-2 border-red-50 hover:bg-red-50' : 'bg-emerald-600 text-white hover:bg-emerald-700']">
                 {{ details.is_admin ? 'Cabut Akses Admin' : 'Jadikan Admin' }}
+              </button>
+
+              <button v-if="canSetHead" @click="handleToggleFamilyHead" :class="['w-full py-3 rounded-2xl text-[10px] font-black uppercase transition-all shadow-lg', details.profile?.is_family_head ? 'bg-white text-amber-600 border-2 border-amber-50 hover:bg-amber-50' : 'bg-amber-500 text-white hover:bg-amber-600']">
+                <Crown class="w-4 h-4 mr-2 inline-block" />
+                {{ details.profile?.is_family_head ? 'Cabut Kepala Keluarga' : 'Jadikan Kepala Keluarga' }}
               </button>
 
               <button v-if="canDelete" @click="deleteMember" class="w-full py-3 bg-white text-gray-400 hover:text-red-600 border-2 border-transparent hover:border-red-100 rounded-2xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-3">

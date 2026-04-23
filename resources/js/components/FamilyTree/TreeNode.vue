@@ -167,7 +167,7 @@ const style = computed(() => ({
         
         <div v-if="ageInfo && (!isExportMode || showFullDetails)" class="flex flex-col mt-0.5">
            <div class="text-[7px] font-black text-slate-500 uppercase tracking-tighter">{{ ageInfo.years }}</div>
-           <div class="text-[9px] font-black text-blue-700 uppercase">{{ ageInfo.age }} TAHUN</div>
+           <div class="text-[9px] font-black text-emerald-700 uppercase">{{ ageInfo.age }} TAHUN</div>
         </div>
 
         <div v-if="!isExportMode || showFullDetails" class="text-[8px] text-slate-500 font-bold opacity-80 uppercase tracking-tighter truncate mt-0.5">{{ node.full_name }}</div>
@@ -175,7 +175,7 @@ const style = computed(() => ({
     </div>
     
     <!-- "ME" Badge (TOP RIGHT) -->
-    <div v-if="node.panggilan === 'saya' && !isExportMode" class="absolute -top-2 -right-2 w-6 h-6 bg-blue-600 text-white text-[9px] font-black flex items-center justify-center rounded-full border-2 border-white shadow-lg z-30">
+    <div v-if="node.panggilan === 'saya' && !isExportMode" class="absolute -top-2 -right-2 w-6 h-6 bg-emerald-600 text-white text-[9px] font-black flex items-center justify-center rounded-full border-2 border-white shadow-lg z-30">
       ME
     </div>
   </div>

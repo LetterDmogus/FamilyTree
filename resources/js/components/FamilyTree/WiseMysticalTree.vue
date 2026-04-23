@@ -248,7 +248,7 @@ watch(isAiPanelOpen, (val) => {
 <template>
     <div v-if="isAiPanelOpen" class="w-96 border-l bg-white flex flex-col h-full shadow-2xl z-50 overflow-hidden text-gray-900 select-none animate-in slide-in-from-right duration-300">
         <!-- Header -->
-        <div class="p-6 border-b flex items-center justify-between bg-gradient-to-r from-emerald-50 to-blue-50">
+        <div class="p-6 border-b flex items-center justify-between bg-gradient-to-r from-emerald-50 to-emerald-50">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center shadow-lg overflow-hidden border-2 border-emerald-500">
                     <img src="/storage/profiles/WiseTree.png" alt="Wise Mystical Tree" class="w-full h-full object-cover" />
@@ -293,7 +293,7 @@ watch(isAiPanelOpen, (val) => {
                 </div>
 
                 <div :class="['max-w-[85%] p-4 rounded-2xl shadow-sm text-sm font-medium leading-relaxed', 
-                    msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white border border-gray-100 text-gray-800 rounded-tl-none']">
+                    msg.role === 'user' ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-white border border-gray-100 text-gray-800 rounded-tl-none']">
                     {{ msg.content }}
                 </div>
             </div>

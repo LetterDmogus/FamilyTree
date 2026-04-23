@@ -20,8 +20,9 @@ class RoleController extends Controller
         $this->authorize('view_roles');
 
         $roles = QueryBuilder::for(Role::with('permissions'))
+            ->where('name', '!=', 'superadmin') // Protect superadmin role
             ->allowedFilters(
-                AllowedFilter::partial('name'),
+                AllowedFilter::scope('search'),
             )
             ->allowedSorts('name', 'created_at')
             ->defaultSort('name')
@@ -36,7 +37,7 @@ class RoleController extends Controller
                 'create' => auth()->user()->can('create_roles'),
                 'update' => auth()->user()->can('update_roles'),
                 'delete' => auth()->user()->can('delete_roles'),
-            ]
+            ],
         ]);
     }
 
@@ -50,7 +51,7 @@ class RoleController extends Controller
         ]);
 
         $role = Role::create(['name' => $validated['name'], 'guard_name' => 'web']);
-        
+
         if (isset($validated['permissions'])) {
             $role->syncPermissions($validated['permissions']);
         }
@@ -68,7 +69,7 @@ class RoleController extends Controller
         ]);
 
         $role->update(['name' => $validated['name']]);
-        
+
         if (isset($validated['permissions'])) {
             $role->syncPermissions($validated['permissions']);
         }

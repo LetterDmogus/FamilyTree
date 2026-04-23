@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
-use App\Models\Relation;
-use App\Models\UserProfile;
 use App\Models\MasterAdditionalField;
 use App\Models\MasterSocialMedia;
+use App\Models\Relation;
+use App\Models\Setting;
+use App\Models\User;
+use App\Models\UserProfile;
 use App\Services\FamilyTreeService;
 use App\Services\RelationshipCalculator;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -23,14 +24,17 @@ class FamilyTreeController extends Controller
         protected RelationshipCalculator $calculator
     ) {}
 
-    public function show(User $user = null)
+    public function show(?User $user = null)
     {
         $viewer = auth()->user();
         $targetUser = $user ?? $viewer;
 
         $root = $this->findVisualRoot($targetUser);
+        
+        $settings = Setting::all()->mapWithKeys(fn($s) => [$s->key => $s->cast_value]);
+        $maxDepth = (int) ($settings['priority_limit'] ?? 5);
 
-        $tree = $this->treeService->buildTree($root, $viewer, 5);
+        $tree = $this->treeService->buildTree($root, $viewer, $maxDepth);
 
         return Inertia::render('FamilyTree/Show', [
             'tree' => $tree,
@@ -38,12 +42,13 @@ class FamilyTreeController extends Controller
             'master' => [
                 'socialMedias' => MasterSocialMedia::all(),
                 'additionalFields' => MasterAdditionalField::all(),
+                'settings' => $settings,
             ],
             'can' => [
                 'manage_all' => $viewer->can('manage_tree_all'),
                 'manage_self' => $viewer->can('manage_tree_self'),
                 'delete_all' => $viewer->can('delete_node_all'),
-            ]
+            ],
         ]);
     }
 
@@ -52,12 +57,12 @@ class FamilyTreeController extends Controller
         $parentId = Relation::where('related_user_id', $user->id)
             ->where('type', 'child')
             ->value('user_id');
-        
-        if (!$parentId) {
+
+        if (! $parentId) {
             $spouseId = Relation::where('user_id', $user->id)
                 ->where('type', 'spouse')
                 ->value('related_user_id');
-            
+
             if ($spouseId) {
                 return $this->findVisualRoot(User::find($spouseId));
             }
@@ -71,7 +76,7 @@ class FamilyTreeController extends Controller
             ->where('type', 'child')
             ->value('user_id');
 
-        if (!$grandParentId) {
+        if (! $grandParentId) {
             return $parent;
         }
 
@@ -82,18 +87,19 @@ class FamilyTreeController extends Controller
     {
         $fromId = $request->input('from_id', auth()->id());
         $fromUser = User::find($fromId) ?? auth()->user();
-        
+
         $user->load(['profile', 'roles']);
         $relationLabel = $this->calculator->calculate($fromUser, $user);
 
         // Enhance social media data with prefixes
         $profile = $user->profile;
-        if ($profile && !empty($profile->social_media)) {
+        if ($profile && ! empty($profile->social_media)) {
             $platforms = MasterSocialMedia::all();
-            $enhancedSocial = array_map(function($sm) use ($platforms) {
+            $enhancedSocial = array_map(function ($sm) use ($platforms) {
                 $platform = $platforms->firstWhere('name', $sm['platform_name']);
+
                 return array_merge($sm, [
-                    'prefix' => $platform ? $platform->prefix : ''
+                    'prefix' => $platform ? $platform->prefix : '',
                 ]);
             }, $profile->social_media);
             $profile->social_media = $enhancedSocial;
@@ -106,14 +112,29 @@ class FamilyTreeController extends Controller
             'email' => $user->email,
             'relation_label' => $relationLabel,
             'profile' => $profile,
+            'is_admin' => $user->can('manage_tree_all'),
             'can' => [
                 'toggle_admin' => auth()->user()->can('manage_roles'),
-                'delete' => auth()->user()->can('delete_node_all') && !$user->profile?->is_family_head,
+                'delete' => auth()->user()->can('delete_node_all') && ! $user->profile?->is_family_head,
                 'edit' => auth()->user()->can('manage_tree_all') || (auth()->user()->can('manage_tree_self') && auth()->id() === $user->id),
+                'set_head' => auth()->user()->can('manage_tree_all'),
             ]
-        ]);
-    }
+            ]);
+            }
 
+            public function toggleFamilyHead(User $user)
+            {
+            $this->authorize('manage_tree_all');
+
+            $user->profile->update([
+            'is_family_head' => ! $user->profile->is_family_head
+            ]);
+
+            $this->clearTreeCache();
+
+            $status = $user->profile->is_family_head ? 'ditetapkan sebagai' : 'dicabut statusnya sebagai';
+            return back()->with('success', "{$user->profile->full_name} {$status} Kepala Keluarga.");
+            }
     public function storeRelation(Request $request)
     {
         $validated = $request->validate([
@@ -132,13 +153,36 @@ class FamilyTreeController extends Controller
         ]);
 
         $targetUserId = $validated['user_id'];
-        
+
         // Authorization check
-        $canManage = auth()->user()->can('manage_tree_all') || 
+        $canManage = auth()->user()->can('manage_tree_all') ||
                     (auth()->user()->can('manage_tree_self') && auth()->id() == $targetUserId);
-        
-        if (!$canManage) {
+
+        if (! $canManage) {
             abort(403, 'Anda tidak memiliki izin untuk menambah anggota ini.');
+        }
+
+        // Global Settings Validation
+        $settings = Setting::all()->pluck('value', 'key');
+        $allowSameSex = filter_var($settings['allow_same_sex'] ?? 'false', FILTER_VALIDATE_BOOLEAN);
+        $maxSpouses = (int) ($settings['max_spouses'] ?? 0);
+
+        if ($validated['type'] === 'spouse') {
+            $targetUser = User::with('profile')->find($targetUserId);
+
+            // 1. Same Sex Check
+            if (! $allowSameSex && $targetUser->profile->gender === $validated['gender']) {
+                $siteName = \App\Models\Setting::getValue('site_name', 'Wise Mystical Tree');
+                return back()->withErrors(['error' => "Aturan {$siteName} melarang penambahan pasangan dengan gender yang sama."]);
+            }
+
+            // 2. Max Spouse Check
+            if ($maxSpouses > 0) {
+                $currentSpouseCount = Relation::where('user_id', $targetUserId)->where('type', 'spouse')->count();
+                if ($currentSpouseCount >= $maxSpouses) {
+                    return back()->withErrors(['error' => "Batas maksimal pasangan ({$maxSpouses}) telah tercapai."]);
+                }
+            }
         }
 
         $user = User::create([
@@ -194,16 +238,16 @@ class FamilyTreeController extends Controller
     public function updateProfile(User $user, Request $request)
     {
         // Authorization check
-        $canEdit = auth()->user()->can('manage_tree_all') || 
+        $canEdit = auth()->user()->can('manage_tree_all') ||
                   (auth()->user()->can('manage_tree_self') && auth()->id() === $user->id);
-        
-        if (!$canEdit) {
+
+        if (! $canEdit) {
             abort(403, 'Anda tidak memiliki izin untuk mengedit profil ini.');
         }
 
         $validated = $request->validate([
             'full_name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
+            'email' => 'required|email|unique:users,email,'.$user->id,
             'gender' => 'required|in:M,F',
             'birth_date' => 'required|date',
             'birth_place' => 'required|string|max:255',
@@ -218,6 +262,22 @@ class FamilyTreeController extends Controller
             'name' => explode(' ', $validated['full_name'])[0],
             'email' => $validated['email'],
         ]);
+
+        // Loophole: Check if gender change violates same-sex rules for existing spouses
+        if ($user->profile->gender !== $validated['gender']) {
+            $allowSameSex = \App\Models\Setting::getValue('allow_same_sex', false);
+            if (! $allowSameSex) {
+                $hasOppositeSpouse = Relation::where('user_id', $user->id)
+                    ->where('type', 'spouse')
+                    ->whereHas('relatedUser.profile', function ($q) use ($validated) {
+                        $q->where('gender', $validated['gender']);
+                    })->exists();
+
+                if ($hasOppositeSpouse) {
+                    return back()->withErrors(['error' => 'Perubahan gender ditolak karena akan melanggar aturan pernikahan sesama gender pada pasangan yang ada.']);
+                }
+            }
+        }
 
         $data = [
             'full_name' => $validated['full_name'],
@@ -243,7 +303,18 @@ class FamilyTreeController extends Controller
 
     public function toggleAdmin(User $user)
     {
+        // 1. Only superadmin or admin with manage_roles can promote others
         $this->authorize('manage_roles');
+
+        // 2. Loophole Protection: Cannot revoke own admin status (self-lockout)
+        if (auth()->id() === $user->id) {
+            return back()->withErrors(['error' => 'Anda tidak dapat mencabut hak akses admin Anda sendiri.']);
+        }
+
+        // 3. Superadmin Protection: Role cannot be toggled
+        if ($user->hasRole('superadmin')) {
+            return back()->withErrors(['error' => 'Hak akses Super Admin bersifat permanen.']);
+        }
 
         if ($user->hasRole('admin')) {
             $user->removeRole('admin');
@@ -262,14 +333,12 @@ class FamilyTreeController extends Controller
     {
         $this->authorize('delete_node_all');
 
-        if ($user->profile->is_family_head) {
-            return back()->withErrors(['error' => 'Kepala keluarga tidak dapat dihapus.']);
+        try {
+            $user->delete();
+            return back()->with('success', 'Anggota keluarga berhasil dihapus dan cabang telah disambungkan kembali.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => $e->getMessage()]);
         }
-
-        $user->delete();
-        $this->clearTreeCache();
-
-        return back()->with('success', 'Anggota keluarga berhasil dihapus.');
     }
 
     private function clearTreeCache()

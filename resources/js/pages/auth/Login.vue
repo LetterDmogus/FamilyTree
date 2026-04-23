@@ -42,7 +42,7 @@ defineProps<{
             <div class="grid gap-2 text-left">
                 <Label for="email" class="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">Alamat Email</Label>
                 <div class="relative group">
-                    <Mail class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 group-focus-within:text-indigo-600 transition-colors" />
+                    <Mail class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 group-focus-within:text-emerald-600 transition-colors" />
                     <Input
                         id="email"
                         type="email"
@@ -63,13 +63,13 @@ defineProps<{
                     <Link
                         v-if="canResetPassword"
                         :href="request().url"
-                        class="text-[9px] font-black uppercase text-blue-600 hover:text-indigo-600 transition-colors"
+                        class="text-[9px] font-black uppercase text-emerald-600 hover:text-emerald-600 transition-colors"
                     >
                         Lupa Password?
                     </Link>
                 </div>
                 <div class="relative group">
-                    <Lock class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 group-focus-within:text-indigo-600 transition-colors z-10" />
+                    <Lock class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 group-focus-within:text-emerald-600 transition-colors z-10" />
                     <PasswordInput
                         id="password"
                         name="password"
@@ -93,7 +93,7 @@ defineProps<{
         <!-- Submit Button -->
         <Button
             type="submit"
-            class="w-full py-7 bg-gray-900 text-white rounded-3xl font-black uppercase text-[11px] tracking-[0.2em] hover:bg-indigo-600 transition-all shadow-xl shadow-gray-200 mt-4"
+            class="w-full py-7 bg-gray-900 text-white rounded-3xl font-black uppercase text-[11px] tracking-[0.2em] hover:bg-emerald-600 transition-all shadow-xl shadow-gray-200 mt-4"
             :disabled="processing"
         >
             <Spinner v-if="processing" class="mr-2" />

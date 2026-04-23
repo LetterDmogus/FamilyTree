@@ -2,11 +2,12 @@
 
 use App\Http\Controllers\Admin\DataDetailController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SocialMediaController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FamilyTreeController;
 use App\Http\Controllers\MasterDataController;
-use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
@@ -18,7 +19,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 
     // Admin Panel
-    Route::middleware('can:manage_roles')->group(function () {
+    Route::middleware('can:view_roles')->group(function () {
         Route::get('admin/roles', [RoleController::class, 'index'])->name('admin.roles.index');
         Route::post('admin/roles', [RoleController::class, 'store'])->name('admin.roles.store');
         Route::put('admin/roles/{role}', [RoleController::class, 'update'])->name('admin.roles.update');
@@ -27,7 +28,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('admin/roles/{role}/force', [RoleController::class, 'forceDestroy'])->name('admin.roles.force-destroy');
     });
 
-    Route::middleware('can:manage_users')->group(function () {
+    Route::middleware('can:view_users')->group(function () {
         Route::get('admin/users', [UserController::class, 'index'])->name('admin.users.index');
         Route::put('admin/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
         Route::put('admin/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('admin.users.reset-password');
@@ -36,7 +37,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('admin/users/{user}/force', [UserController::class, 'forceDestroy'])->name('admin.users.force-destroy');
     });
 
-    Route::middleware('can:manage_master_data')->group(function () {
+    Route::middleware('can:view_master')->group(function () {
         // Social Media
         Route::get('admin/social-medias', [SocialMediaController::class, 'index'])->name('admin.social-medias.index');
         Route::post('admin/social-medias', [SocialMediaController::class, 'store'])->name('admin.social-medias.store');
@@ -54,6 +55,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('admin/data-details/{dataDetail}/force', [DataDetailController::class, 'forceDestroy'])->name('admin.data-details.force-destroy');
     });
 
+    Route::middleware('can:manage_settings')->group(function () {
+        Route::get('admin/settings/wise-tree', [SettingController::class, 'index'])->name('admin.settings.wise-tree.index');
+        Route::put('admin/settings/wise-tree', [SettingController::class, 'update'])->name('admin.settings.wise-tree.update');
+        Route::get('admin/settings/backup', [SettingController::class, 'downloadBackup'])->name('admin.settings.backup');
+        
+        Route::get('admin/logs', [\App\Http\Controllers\Admin\ActivityLogController::class, 'index'])->name('admin.logs.index');
+    });
+
     Route::get('/tree/{user?}', [FamilyTreeController::class, 'show'])->name('tree.show');
 
     // Legacy Master Data
@@ -68,6 +77,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/api/users/{user}', [FamilyTreeController::class, 'destroyMember'])->name('users.destroy');
     Route::post('/api/relations', [FamilyTreeController::class, 'storeRelation'])->name('relations.store');
     Route::post('/api/users/{user}/toggle-admin', [FamilyTreeController::class, 'toggleAdmin'])->name('users.toggle-admin');
+    Route::post('/api/users/{user}/toggle-head', [FamilyTreeController::class, 'toggleFamilyHead'])->name('users.toggle-head');
 });
 
 require __DIR__.'/settings.php';

@@ -86,7 +86,7 @@ function getNodeClasses(personNode) {
               <div class="text-[9px] text-slate-400 font-bold opacity-80 uppercase tracking-tight">{{ node.full_name }}</div>
             </div>
           </div>
-          <div v-if="node.panggilan === 'saya'" class="absolute -top-2 -right-2 w-5 h-5 bg-blue-600 text-white text-[8px] font-black flex items-center justify-center rounded-full border-2 border-white shadow-sm">
+          <div v-if="node.panggilan === 'saya'" class="absolute -top-2 -right-2 w-5 h-5 bg-emerald-600 text-white text-[8px] font-black flex items-center justify-center rounded-full border-2 border-white shadow-sm">
             ME
           </div>
         </div>

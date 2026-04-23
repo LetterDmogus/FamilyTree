@@ -42,7 +42,7 @@ class UserController extends Controller
         return Inertia::render('Admin/Users/Index', [
             'items' => $users,
             'filters' => request()->all(['search', 'trashed', 'sort', 'per_page']),
-            'roles' => Role::all(),
+            'roles' => Role::where('name', '!=', 'superadmin')->get(),
             'can' => [
                 'create' => auth()->user()->can('create_users'),
                 'update' => auth()->user()->can('update_users'),
@@ -56,10 +56,14 @@ class UserController extends Controller
     {
         $this->authorize('update_users');
 
+        if ($user->hasRole('superadmin')) {
+            abort(403, 'Super Admin tidak dapat dimodifikasi.');
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,'.$user->id,
-            'role' => 'required|string|exists:roles,name',
+            'role' => 'required|string|exists:roles,name|not_in:superadmin',
         ]);
 
         $user->update([
@@ -76,6 +80,10 @@ class UserController extends Controller
     {
         $this->authorize('update_users');
 
+        if ($user->hasRole('superadmin')) {
+            abort(403);
+        }
+
         $user->update([
             'password' => bcrypt('password'),
         ]);
@@ -87,16 +95,29 @@ class UserController extends Controller
     {
         $this->authorize('delete_users');
 
-        $user->delete();
+        if ($user->hasRole('superadmin')) {
+            abort(403, 'Super Admin tidak dapat dihapus.');
+        }
 
-        return back()->with('success', 'User soft deleted successfully.');
+        try {
+            $user->delete();
+            return back()->with('success', 'User deleted and tree healed successfully.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => $e->getMessage()]);
+        }
     }
 
     public function restore($id)
     {
         $this->authorize('access_trash_users');
 
-        User::withTrashed()->findOrFail($id)->restore();
+        $user = User::withTrashed()->findOrFail($id);
+        
+        if ($user->hasRole('superadmin')) {
+            abort(403);
+        }
+
+        $user->restore();
 
         return back()->with('success', 'User restored successfully.');
     }
@@ -105,7 +126,13 @@ class UserController extends Controller
     {
         $this->authorize('access_trash_users');
 
-        User::withTrashed()->findOrFail($id)->forceDelete();
+        $user = User::withTrashed()->findOrFail($id);
+
+        if ($user->hasRole('superadmin')) {
+            abort(403);
+        }
+
+        $user->forceDelete();
 
         return back()->with('success', 'User permanently deleted.');
     }
