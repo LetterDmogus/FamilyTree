@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 
 class Relation extends Model
 {
+    use LogsActivity;
+
     protected $fillable = ['user_id', 'related_user_id', 'type', 'is_blood'];
 
     public function user()

@@ -228,6 +228,7 @@ const forceDeleteItem = (id: number) => {
                                         <TooltipTrigger as-child><Button variant="outline" size="icon" class="w-8 h-8 rounded-lg text-red-700 border-gray-100 hover:bg-red-50 transition-all shadow-sm" @click="forceDeleteItem(item.id)"><ShieldBan class="h-3.5 w-3.5 stroke-[2.5]" /></Button></TooltipTrigger>
                                         <TooltipContent side="top">Hapus Permanen</TooltipContent>
                                     </Tooltip>
+                                    <slot name="item-actions" :item="item"></slot>
                                 </div>
                                 <div v-else class="flex justify-end px-3">
                                     <ShieldCheck class="w-4 h-4 text-emerald-600 opacity-30" title="Protected Account" />

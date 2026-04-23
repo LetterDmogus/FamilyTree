@@ -219,7 +219,7 @@ onUnmounted(() => {
 
 <template>
   <div class="flex h-screen bg-white overflow-hidden select-none font-sans relative text-gray-900">
-    <Head title="Family Tree" />
+    <Head :title="page.props.name" />
     
     <!-- Export Loading Overlay -->
     <transition enter-active-class="duration-300 ease-out" enter-from-class="opacity-0" enter-to-class="opacity-100" leave-active-class="duration-300 ease-in" leave-from-class="opacity-100" leave-to-class="opacity-0">
@@ -361,7 +361,7 @@ onUnmounted(() => {
     </div>
 
     <ExportModal :open="exportModalOpen" @close="exportModalOpen = false" @start-export="handleStartExport" />
-    <NodePanel v-if="selectedNode" :node="selectedNode" :root-id="rootUser.id" @add-relation="openCreateModal" @edit-profile="openEditModal" @close="selectedNode = null" />
+    <NodePanel v-if="selectedNode" :node="selectedNode" :root-id="rootUser.id" @node-click="handleNodeClick" @add-relation="openCreateModal" @edit-profile="openEditModal" @close="selectedNode = null" />
     <WiseMysticalTree :tree-data="tree" />
     <MemberModal v-if="memberModal.open" :mode="memberModal.mode" :member="memberModal.data" :type="memberModal.type" :master="master" @close="memberModal.open = false" />
   </div>

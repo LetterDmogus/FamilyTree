@@ -24,7 +24,7 @@ defineProps({
                     <Trees class="w-12 h-12 stroke-[2.5]" />
                 </div>
                 <div class="space-y-2">
-                    <h1 class="text-5xl font-black text-gray-900 tracking-tighter">Family Tree</h1>
+                    <h1 class="text-5xl font-black text-gray-900 tracking-tighter">{{ $page.props.name }}</h1>
                     <p class="text-sm font-bold text-gray-400 uppercase tracking-[0.2em]">Visualisasikan Silsilah & Cerita Keluarga</p>
                 </div>
             </div>
@@ -49,7 +49,7 @@ defineProps({
             <!-- Footer -->
             <div class="pt-12">
                 <p class="text-[9px] font-black text-gray-300 uppercase tracking-widest leading-loose">
-                    Dibuat dengan kasih sayang &bull; &copy; {{ new Date().getFullYear() }} Family Tree Project
+                    Dibuat dengan kasih sayang &bull; &copy; {{ new Date().getFullYear() }} {{ $page.props.name }} Project
                 </p>
             </div>
 

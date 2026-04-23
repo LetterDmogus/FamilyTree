@@ -58,6 +58,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('can:manage_settings')->group(function () {
         Route::get('admin/settings/wise-tree', [SettingController::class, 'index'])->name('admin.settings.wise-tree.index');
         Route::put('admin/settings/wise-tree', [SettingController::class, 'update'])->name('admin.settings.wise-tree.update');
+        Route::get('admin/settings/backup', [SettingController::class, 'downloadBackup'])->name('admin.settings.backup');
+        
+        Route::get('admin/logs', [\App\Http\Controllers\Admin\ActivityLogController::class, 'index'])->name('admin.logs.index');
     });
 
     Route::get('/tree/{user?}', [FamilyTreeController::class, 'show'])->name('tree.show');

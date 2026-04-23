@@ -14,6 +14,12 @@ class SettingSeeder extends Seeder
     {
         $settings = [
             [
+                'key' => 'site_name',
+                'value' => 'Wise Mystical Tree',
+                'type' => 'string',
+                'description' => 'Nama identitas utama website silsilah',
+            ],
+            [
                 'key' => 'max_spouses',
                 'value' => '0',
                 'type' => 'integer',

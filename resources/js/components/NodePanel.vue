@@ -34,7 +34,7 @@ const props = defineProps({
   rootId: { type: Number, required: true }
 })
 
-const emit = defineEmits(['add-relation', 'edit-profile', 'close'])
+const emit = defineEmits(['add-relation', 'edit-profile', 'close', 'node-click'])
 
 const details = ref(null)
 const activeTab = ref('info')

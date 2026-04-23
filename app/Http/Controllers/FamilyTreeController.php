@@ -172,7 +172,8 @@ class FamilyTreeController extends Controller
 
             // 1. Same Sex Check
             if (! $allowSameSex && $targetUser->profile->gender === $validated['gender']) {
-                return back()->withErrors(['error' => 'Aturan Wise Mystical Tree melarang penambahan pasangan dengan gender yang sama.']);
+                $siteName = \App\Models\Setting::getValue('site_name', 'Wise Mystical Tree');
+                return back()->withErrors(['error' => "Aturan {$siteName} melarang penambahan pasangan dengan gender yang sama."]);
             }
 
             // 2. Max Spouse Check
