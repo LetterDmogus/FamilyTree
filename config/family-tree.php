@@ -22,6 +22,11 @@ return [
             'down_1_F_step' => 'Anak Tiri Perempuan',
             'down_1_step' => 'Anak Tiri',
             'down_2' => 'Cucu',
+            'down_2_step' => 'Cucu Tiri',
+            'down_3' => 'Cicit',
+            'down_3_step' => 'Cicit Tiri',
+            'down_4' => 'Canggah',
+            'down_4_step' => 'Canggah Tiri',
             'sibling_M_older' => 'Abang',
             'sibling_F_older' => 'Kakak',
             'sibling_M_younger' => 'Adik Laki-laki',
@@ -50,6 +55,8 @@ return [
             'up_1_down_2' => 'Keponakan Ipar',
             'down_1' => 'Anak', // Descendants are still children
             'down_2' => 'Cucu',
+            'down_3' => 'Cicit',
+            'down_4' => 'Canggah',
         ],
 
         // --- OTHER IN-LAWS (e.g. Brother's Wife, Son's Wife) ---
@@ -58,6 +65,8 @@ return [
             'sibling_F' => 'Ipar Perempuan',
             'down_1' => 'Menantu',
             'down_2' => 'Cucu Menantu',
+            'down_3' => 'Cicit Menantu',
+            'down_4' => 'Canggah Menantu',
             'up_1_M' => 'Ayah Mertua',
             'up_1_F' => 'Ibu Mertua',
             'up_1_down_2' => 'Keponakan Ipar',

@@ -48,15 +48,6 @@ class ProfileController extends Controller
      */
     public function destroy(ProfileDeleteRequest $request): RedirectResponse
     {
-        $user = $request->user();
-
-        Auth::logout();
-
-        $user->delete();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return redirect('/');
+        return back()->withErrors(['error' => 'Anda tidak dapat menghapus akun Anda sendiri. Penghapusan hanya dapat dilakukan oleh orang tua Anda.']);
     }
 }

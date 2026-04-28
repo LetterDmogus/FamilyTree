@@ -24,17 +24,18 @@ class FamilyTreeController extends Controller
         protected RelationshipCalculator $calculator
     ) {}
 
-    public function show(?User $user = null)
+    public function show(Request $request, ?User $user = null)
     {
         $viewer = auth()->user();
         $targetUser = $user ?? $viewer;
+        $expandedIds = $request->input('expanded', []);
 
         $root = $this->findVisualRoot($targetUser);
         
         $settings = Setting::all()->mapWithKeys(fn($s) => [$s->key => $s->cast_value]);
         $maxDepth = (int) ($settings['priority_limit'] ?? 5);
 
-        $tree = $this->treeService->buildTree($root, $viewer, $maxDepth);
+        $tree = $this->treeService->buildTree($root, $viewer, $maxDepth, $expandedIds);
 
         return Inertia::render('FamilyTree/Show', [
             'tree' => $tree,
@@ -105,6 +106,23 @@ class FamilyTreeController extends Controller
             $profile->social_media = $enhancedSocial;
         }
 
+        // Point 7, 9 & 16: Fetch Attachments
+        $viewer = auth()->user();
+        $isSelf = $viewer->id === $user->id;
+        $isChild = $viewer->isChildOf($user);
+        $isParent = $viewer->isParentOf($user) || $viewer->isStepParentOf($user);
+        
+        $attachments = [
+            'history' => $user->attachments()->where('category', 'history')->latest()->get(),
+            'identity' => ($isSelf || $isChild) 
+                ? $user->attachments()->where('category', 'identity')->get() 
+                : [],
+            // Point 9: Private notes for the user (from parents)
+            'notes' => $isSelf 
+                ? $user->attachments()->where('category', 'note')->with('user')->latest()->get()
+                : []
+        ];
+
         return response()->json([
             'id' => $user->id,
             'name' => $user->name,
@@ -112,15 +130,64 @@ class FamilyTreeController extends Controller
             'email' => $user->email,
             'relation_label' => $relationLabel,
             'profile' => $profile,
+            'attachments' => $attachments,
             'is_admin' => $user->can('manage_tree_all'),
             'can' => [
                 'toggle_admin' => auth()->user()->can('manage_roles'),
-                'delete' => auth()->user()->can('delete_node_all') && ! $user->profile?->is_family_head,
+                'delete' => (auth()->user()->isParentOf($user) || auth()->user()->isStepParentOf($user)) && auth()->id() !== $user->id,
                 'edit' => auth()->user()->can('manage_tree_all') || (auth()->user()->can('manage_tree_self') && auth()->id() === $user->id),
                 'set_head' => auth()->user()->can('manage_tree_all'),
+                'upload_identity' => $isSelf,
+                'write_note' => $isParent // Only parents can write notes to this child
             ]
             ]);
             }
+
+    public function storeNote(User $user, Request $request)
+    {
+        $viewer = auth()->user();
+        if (!$viewer->isParentOf($user) && !$viewer->isStepParentOf($user)) {
+            abort(403, 'Hanya orang tua yang dapat memberikan catatan kepada anak.');
+        }
+
+        $validated = $request->validate([
+            'content' => 'required|string|max:1000',
+        ]);
+
+        \App\Models\UserAttachment::create([
+            'user_id' => $user->id, // Recipient
+            'category' => 'note',
+            'type' => 'text',
+            'content' => $validated['content'],
+            'metadata' => [
+                'sender_id' => $viewer->id,
+                'sender_name' => $viewer->profile->full_name ?? $viewer->name
+            ]
+        ]);
+
+        return back()->with('success', 'Catatan privat berhasil dikirim.');
+    }
+
+    public function uploadIdentity(User $user, Request $request)
+    {
+        if (auth()->id() !== $user->id) {
+            abort(403, 'Hanya Anda yang dapat mengunggah dokumen identitas Anda sendiri.');
+        }
+
+        $validated = $request->validate([
+            'type' => 'required|in:kk,ktp',
+            'file' => 'required|image|max:4096',
+        ]);
+
+        $path = $request->file('file')->store('identities', 'public');
+
+        \App\Models\UserAttachment::updateOrCreate(
+            ['user_id' => $user->id, 'type' => $validated['type'], 'category' => 'identity'],
+            ['file_path' => $path, 'is_private' => true]
+        );
+
+        return back()->with('success', strtoupper($validated['type']) . ' berhasil diunggah.');
+    }
 
             public function toggleFamilyHead(User $user)
             {
@@ -183,6 +250,18 @@ class FamilyTreeController extends Controller
                     return back()->withErrors(['error' => "Batas maksimal pasangan ({$maxSpouses}) telah tercapai."]);
                 }
             }
+
+            // 3. Minimum Marriage Age Check (Poin 4)
+            $minAge = (int) ($settings['min_marriage_age'] ?? 17);
+            $birthDate = new \Carbon\Carbon($validated['birth_date']);
+            if ($birthDate->age < $minAge) {
+                return back()->withErrors(['error' => "Minimal umur untuk menikah adalah {$minAge} tahun (Anggota yang akan ditambah masih berumur {$birthDate->age} tahun)."]);
+            }
+            
+            $targetBirthDate = new \Carbon\Carbon($targetUser->profile->birth_date);
+            if ($targetBirthDate->age < $minAge) {
+                return back()->withErrors(['error' => "{$targetUser->name} masih berumur {$targetBirthDate->age} tahun, belum mencapai batas minimal {$minAge} tahun untuk memiliki pasangan."]);
+            }
         }
 
         $user = User::create([
@@ -218,6 +297,16 @@ class FamilyTreeController extends Controller
                 'type' => 'child',
                 'is_blood' => true,
             ]);
+
+            // Link to selected spouse if provided in the request
+            if ($request->filled('spouse_id')) {
+                Relation::create([
+                    'user_id' => $request->spouse_id,
+                    'related_user_id' => $user->id,
+                    'type' => 'child',
+                    'is_blood' => true,
+                ]);
+            }
         } elseif ($validated['type'] === 'spouse') {
             Relation::create(['user_id' => $targetUserId, 'related_user_id' => $user->id, 'type' => 'spouse', 'is_blood' => false]);
             Relation::create(['user_id' => $user->id, 'related_user_id' => $targetUserId, 'type' => 'spouse', 'is_blood' => false]);
@@ -291,6 +380,19 @@ class FamilyTreeController extends Controller
         ];
 
         if ($request->hasFile('profile_photo')) {
+            // Save old photo to history before replacing
+            if ($user->profile->profile_photo_path) {
+                \App\Models\UserAttachment::create([
+                    'user_id' => $user->id,
+                    'category' => 'history',
+                    'type' => 'profile_photo',
+                    'file_path' => $user->profile->profile_photo_path,
+                    'metadata' => [
+                        'replaced_at' => now()->toDateTimeString(),
+                        'reason' => 'Profile update'
+                    ]
+                ]);
+            }
             $data['profile_photo_path'] = $request->file('profile_photo')->store('profiles', 'public');
         }
 
@@ -331,11 +433,20 @@ class FamilyTreeController extends Controller
 
     public function destroyMember(User $user)
     {
-        $this->authorize('delete_node_all');
+        if (auth()->id() === $user->id) {
+            return back()->withErrors(['error' => 'Anda tidak dapat menghapus diri sendiri.']);
+        }
+
+        $isParent = auth()->user()->isParentOf($user);
+        $isStepParent = auth()->user()->isStepParentOf($user);
+
+        if (! $isParent && ! $isStepParent) {
+            return back()->withErrors(['error' => 'Hanya orang tua (kandung atau tiri) yang dapat menghapus data anggota ini.']);
+        }
 
         try {
             $user->delete();
-            return back()->with('success', 'Anggota keluarga berhasil dihapus dan cabang telah disambungkan kembali.');
+            return back()->with('success', 'Anggota keluarga berhasil dihapus.');
         } catch (\Exception $e) {
             return back()->withErrors(['error' => $e->getMessage()]);
         }

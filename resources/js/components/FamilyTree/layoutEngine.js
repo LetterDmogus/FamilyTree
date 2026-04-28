@@ -9,28 +9,38 @@ export function computeLayout(rootNode, options = {}) {
   const gapX = options.gapX || 60
   const gapY = options.gapY || 180
   const spouseGap = options.spouseGap || 40
+  const activeSpouseIndices = options.activeSpouseIndices || {}
 
   const positions = {}
   const flattenedNodes = []
 
   // Step 1: Calculate total width needed for each subtree (Post-order)
   function calculateSubtreeWidth(node) {
-    // Collect all children from the main node and all spouses
+    const activeIdx = activeSpouseIndices[node.id] || 0
+    const spouses = node.spouse || []
+    
+    // Only one spouse is visible at a time (Layering)
+    const activeSpouse = spouses[activeIdx] || null
+    node._activeSpouse = activeSpouse
+
+    // Collect children from the main node AND the active spouse
     const directChildren = node.children || []
-    const spouseChildren = (node.spouse || []).flatMap(s => s.children || [])
+    const spouseChildren = activeSpouse ? (activeSpouse.children || []) : []
     const allChildren = [...directChildren, ...spouseChildren]
     node._allChildren = allChildren
     
-    // Width of the parent row: [Bio] -- [Spouse1] -- [Spouse2]
-    const spouseCount = node.spouse?.length || 0
-    const selfRowWidth = nodeWidth + spouseCount * (spouseGap + nodeWidth)
+    // Width of the parent row: [Bio] -- [Active Spouse]
+    const visibleSpouseCount = activeSpouse ? 1 : 0
+    const selfRowWidth = visibleSpouseCount === 1 
+      ? nodeWidth * 2 + spouseGap 
+      : nodeWidth
 
     if (allChildren.length === 0) {
       node._subtreeWidth = selfRowWidth
       return selfRowWidth
     }
 
-    // Width of the children row: Sum of subtrees + gaps
+    // Width of the children row
     let childrenRowWidth = 0
     allChildren.forEach((child, index) => {
       childrenRowWidth += calculateSubtreeWidth(child)
@@ -39,7 +49,6 @@ export function computeLayout(rootNode, options = {}) {
       }
     })
 
-    // The slot width is the maximum of the two levels
     node._subtreeWidth = Math.max(selfRowWidth, childrenRowWidth)
     node._selfRowWidth = selfRowWidth
     node._childrenRowWidth = childrenRowWidth
@@ -52,34 +61,40 @@ export function computeLayout(rootNode, options = {}) {
     const allChildren = node._allChildren || []
     const y = depth * gapY
     
-    const slotWidth = node._subtreeWidth
     const selfRowWidth = node._selfRowWidth || nodeWidth
     const childrenRowWidth = node._childrenRowWidth || 0
 
-    let x, childrenStartX
+    let bioX, childrenStartX
 
-    // Center the narrower row relative to the wider row within the slot
     if (selfRowWidth >= childrenRowWidth) {
-      // Parent row is wider: it takes the full slot
-      x = startX
+      bioX = startX
       childrenStartX = startX + (selfRowWidth - childrenRowWidth) / 2
     } else {
-      // Children row is wider: parents are centered above it
-      x = startX + (childrenRowWidth - selfRowWidth) / 2
+      bioX = startX + (childrenRowWidth - selfRowWidth) / 2
       childrenStartX = startX
     }
 
-    // Save positions
-    positions[node.id] = { x, y, depth }
-    flattenedNodes.push({ ...node, x, y, depth, type: 'bio' })
+    // Save Bio Position
+    const totalSpouseLayers = node.spouse?.length || 0
+    const activeIdx = activeSpouseIndices[node.id] || 0
 
-    // Position spouses to the right of Bio Node
-    if (node.spouse && node.spouse.length > 0) {
-      node.spouse.forEach((s, idx) => {
-        const sX = x + (nodeWidth + spouseGap) * (idx + 1)
-        positions[s.id] = { x: sX, y, depth }
-        flattenedNodes.push({ ...s, x: sX, y, depth, type: 'spouse', mainId: node.id })
-      })
+    positions[node.id] = { x: bioX, y, depth }
+    flattenedNodes.push({ 
+      ...node, 
+      x: bioX, 
+      y, 
+      depth, 
+      type: 'bio', 
+      totalSpouseLayers, 
+      activeSpouseIndex: activeIdx 
+    })
+
+    // Position the single active spouse to the right
+    if (node._activeSpouse) {
+      const s = node._activeSpouse
+      const sX = bioX + nodeWidth + spouseGap
+      positions[s.id] = { x: sX, y, depth }
+      flattenedNodes.push({ ...s, x: sX, y, depth, type: 'spouse', mainId: node.id, spousePos: 'right' })
     }
 
     // Recurse for all aggregated children

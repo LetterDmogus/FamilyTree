@@ -41,12 +41,12 @@ function collectPaths(node, paths = []) {
   const nodeHeight = props.config.nodeHeight
   const spouseGap = props.config.spouseGap
 
-  // --- 1. HANDLE DIRECT CHILDREN (No specific spouse) ---
+  // --- 1. HANDLE DIRECT CHILDREN (No specific spouse / Single Parent) ---
   if (node.children && node.children.length > 0) {
-    const junctionX = currentPos.x + nodeWidth / 2
-    drawDescent(junctionX, currentPos.y, node.children, paths)
+    const bioJunctionX = currentPos.x + nodeWidth / 2
+    drawDescent(bioJunctionX, currentPos.y, node.children, paths)
     
-    // Recurse for each direct child
+    // Recurse
     node.children.forEach(child => collectPaths(child, paths))
   }
 
@@ -56,7 +56,7 @@ function collectPaths(node, paths = []) {
       const spousePos = props.positions[spouse.id]
       if (!spousePos) return
 
-      // Line between Bio and this Spouse
+      // Marriage line (Bio is at currentPos, Spouse is at spousePos which is always to the right now)
       paths.push({
         type: 'marriage',
         x1: currentPos.x + nodeWidth,
@@ -65,12 +65,24 @@ function collectPaths(node, paths = []) {
         y2: spousePos.y + nodeHeight / 2
       })
 
-      // If this marriage has children
       if (spouse.children && spouse.children.length > 0) {
+        // Middle of marriage bridge
         const marriageJunctionX = (currentPos.x + nodeWidth + spousePos.x) / 2
-        drawDescent(marriageJunctionX, currentPos.y, spouse.children, paths)
         
-        // Recurse for each child of this spouse
+        // Split children by is_blood
+        const bloodChildren = spouse.children.filter(c => c.is_blood !== false)
+        const stepChildren = spouse.children.filter(c => c.is_blood === false)
+
+        if (bloodChildren.length > 0) {
+          drawDescent(marriageJunctionX, currentPos.y, bloodChildren, paths)
+        }
+        
+        if (stepChildren.length > 0) {
+          // Step-children come from the spouse node directly
+          const spouseJunctionX = spousePos.x + nodeWidth / 2
+          drawDescent(spouseJunctionX, spousePos.y, stepChildren, paths)
+        }
+        
         spouse.children.forEach(child => collectPaths(child, paths))
       }
     })
@@ -92,6 +104,8 @@ function drawDescent(junctionX, parentY, children, paths) {
   // Vertical Stem Down from Junction
   const stemBottomY = firstChildPos.y - (firstChildPos.y - parentY - nodeHeight) / 2
   
+  // Style of main stem: if all children are step-children, stem should be dashed?
+  // Actually, better to keep main stem solid and only dash individual child connections
   paths.push({
     type: 'stem-down',
     x1: junctionX,
@@ -102,8 +116,9 @@ function drawDescent(junctionX, parentY, children, paths) {
 
   // Horizontal Sibling Bridge
   if (children.length > 1) {
-    const firstChildX = props.positions[children[0].id].x + nodeWidth / 2
-    const lastChildX = props.positions[children[children.length - 1].id].x + nodeWidth / 2
+    const sortedChildren = [...children].sort((a, b) => (props.positions[a.id]?.x || 0) - (props.positions[b.id]?.x || 0))
+    const firstChildX = props.positions[sortedChildren[0].id].x + nodeWidth / 2
+    const lastChildX = props.positions[sortedChildren[sortedChildren.length - 1].id].x + nodeWidth / 2
     
     paths.push({
       type: 'sibling-bridge',
@@ -124,7 +139,7 @@ function drawDescent(junctionX, parentY, children, paths) {
         y1: stemBottomY,
         x2: childPos.x + nodeWidth / 2,
         y2: childPos.y,
-        isBlood: child.is_blood !== false // Default to true if not specified
+        isBlood: child.is_blood !== false
       })
     }
   })

@@ -49,6 +49,12 @@ class SettingSeeder extends Seeder
                 'type' => 'integer',
                 'description' => 'Limit tampilan data berdasarkan prioritas',
             ],
+            [
+                'key' => 'min_marriage_age',
+                'value' => '17',
+                'type' => 'integer',
+                'description' => 'Minimal umur untuk menambahkan pasangan',
+            ],
         ];
 
         foreach ($settings as $s) {
