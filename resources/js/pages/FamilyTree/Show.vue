@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
-import { Head, Link, usePage } from '@inertiajs/vue3'
+import { Head, Link, usePage, router } from '@inertiajs/vue3'
 import { toPng } from 'html-to-image'
 import { 
   Share2, 
@@ -45,15 +45,38 @@ const { isAiPanelOpen, toggleAiPanel, closeAiPanel } = useSidePanels()
 
 // --- DATA & LAYOUT ---
 const layout = ref(null)
+const activeSpouseIndices = ref({}) // { node_id: active_index }
+
 function updateLayout() {
   layout.value = computeLayout(props.tree, {
     nodeWidth: 160,
     nodeHeight: 110,
     gapX: 60,
     gapY: 200,
-    spouseGap: 40
+    spouseGap: 40,
+    activeSpouseIndices: activeSpouseIndices.value
   })
 }
+
+function handleSwitchSpouse({ nodeId, index }) {
+  activeSpouseIndices.value[nodeId] = index
+  updateLayout()
+}
+
+const expandedNodes = ref([])
+function handleExpandNode(nodeId) {
+  if (!expandedNodes.value.includes(nodeId)) {
+    expandedNodes.value.push(nodeId)
+    router.get(window.location.pathname, { 
+      expanded: expandedNodes.value 
+    }, { 
+      preserveState: true, 
+      preserveScroll: true,
+      only: ['tree']
+    })
+  }
+}
+
 watch(() => props.tree, updateLayout, { immediate: true })
 
 // --- INTERACTION STATE ---
@@ -275,6 +298,8 @@ onUnmounted(() => {
               :show-full-details="showFullDetails"
               :show-badges="showBadges"
               @click="handleNodeClick"
+              @switch-spouse="handleSwitchSpouse"
+              @expand="handleExpandNode"
             />
           </div>
         </div>

@@ -5,35 +5,40 @@ namespace App\Services;
 use App\Models\Relation;
 use App\Models\User;
 use App\Models\UserProfile;
+use App\Models\UserAttachment;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 class FamilyTreeService
 {
     protected Collection $allUsers;
-
     protected Collection $allProfiles;
-
     protected Collection $allRelations;
+    protected Collection $myNotes;
 
     public function __construct(
         protected RelationshipCalculator $calculator
     ) {}
 
-    public function buildTree(User $rootUser, User $viewingUser, int $maxDepth = 3): array
+    public function buildTree(User $rootUser, User $viewingUser, int $maxDepth = 3, array $expandedIds = []): array
     {
-        $cacheKey = "family_tree_{$rootUser->id}_{$viewingUser->id}_depth_{$maxDepth}";
+        $cacheKey = "family_tree_{$rootUser->id}_{$viewingUser->id}_depth_{$maxDepth}_exp_".implode('_', $expandedIds);
 
-        return Cache::remember($cacheKey, 3600, function () use ($rootUser, $viewingUser, $maxDepth) {
+        return Cache::remember($cacheKey, 3600, function () use ($rootUser, $viewingUser, $maxDepth, $expandedIds) {
             $this->allUsers = User::with('roles')->get();
             $this->allProfiles = UserProfile::all();
             $this->allRelations = Relation::all();
+            
+            // Point 9: Get all notes where the viewing user is the recipient
+            $this->myNotes = UserAttachment::where('user_id', $viewingUser->id)
+                ->where('category', 'note')
+                ->get();
 
-            return $this->buildNode($rootUser, $viewingUser, 1, $maxDepth);
+            return $this->buildNode($rootUser, $viewingUser, 1, $maxDepth, $expandedIds);
         });
     }
 
-    private function buildNode(User $user, User $viewingUser, int $currentDepth, int $maxDepth): array
+    private function buildNode(User $user, User $viewingUser, int $currentDepth, int $maxDepth, array $expandedIds): array
     {
         $profile = $this->allProfiles->where('user_id', $user->id)->first();
         $isAdmin = $user->can('manage_tree_all');
@@ -52,51 +57,44 @@ class FamilyTreeService
             'depth' => $currentDepth,
             'spouse' => [],
             'children' => [],
+            // Check if THIS node (sender) has a note for ME (viewer)
+            'has_note_for_me' => $this->myNotes->contains(fn($n) => ($n->metadata['sender_id'] ?? null) == $user->id)
         ];
-
-        if ($currentDepth >= $maxDepth) {
-            return $node;
-        }
 
         $spouseRelations = $this->allRelations->where('user_id', $user->id)->where('type', 'spouse');
         $childRelations = $this->allRelations->where('user_id', $user->id)->where('type', 'child');
 
-        // Find all children IDs for this user
+        $effectiveMaxDepth = in_array($user->id, $expandedIds) ? $currentDepth + 1 : $maxDepth;
+
+        if ($currentDepth >= $effectiveMaxDepth) {
+            $node['has_more'] = $spouseRelations->isNotEmpty() || $childRelations->isNotEmpty();
+            return $node;
+        }
+
         $myChildrenIds = $childRelations->pluck('related_user_id')->toArray();
 
         foreach ($spouseRelations as $rel) {
             $spouse = $this->allUsers->find($rel->related_user_id);
-            if (! $spouse) {
-                continue;
-            }
+            if (! $spouse) continue;
 
             $sProfile = $this->allProfiles->where('user_id', $spouse->id)->first();
             $sIsAdmin = $spouse->can('manage_tree_all');
-
-            // Find children that belong to BOTH this user and this spouse
-            $commonChildrenRels = $this->allRelations
-                ->where('user_id', $spouse->id)
-                ->where('type', 'child')
-                ->whereIn('related_user_id', $myChildrenIds);
+            $spouseChildrenRels = $this->allRelations->where('user_id', $spouse->id)->where('type', 'child');
 
             $spouseChildren = [];
-            foreach ($commonChildrenRels as $rel) {
+            foreach ($spouseChildrenRels as $rel) {
                 $child = $this->allUsers->find($rel->related_user_id);
                 if ($child) {
-                    $childNode = $this->buildNode($child, $viewingUser, $currentDepth + 1, $maxDepth);
-                    // Add is_blood relative to this node's parent (the current user/spouse pair)
-                    // We check the relation from the *current node user* to the child
-                    $myRelToChild = $this->allRelations
-                        ->where('user_id', $user->id)
-                        ->where('related_user_id', $child->id)
-                        ->where('type', 'child')
-                        ->first();
-
-                    $childNode['is_blood'] = (bool) ($myRelToChild->is_blood ?? true);
-
+                    $childNode = $this->buildNode($child, $viewingUser, $currentDepth + 1, $maxDepth, $expandedIds);
+                    $isLinkedToBio = in_array($child->id, $myChildrenIds);
+                    if ($isLinkedToBio) {
+                        $bioRelToChild = $this->allRelations->where('user_id', $user->id)->where('related_user_id', $child->id)->where('type', 'child')->first();
+                        $childNode['is_blood'] = (bool) ($bioRelToChild->is_blood ?? true);
+                        $myChildrenIds = array_diff($myChildrenIds, [$child->id]);
+                    } else {
+                        $childNode['is_blood'] = false;
+                    }
                     $spouseChildren[] = $childNode;
-                    // Mark as "handled" so they don't appear in the main children list
-                    $myChildrenIds = array_diff($myChildrenIds, [$child->id]);
                 }
             }
 
@@ -111,15 +109,15 @@ class FamilyTreeService
                 'death_date' => ($sProfile && $sProfile->death_date) ? $sProfile->death_date->format('Y-m-d') : null,
                 'pekerjaan' => $sProfile->additional_info['pekerjaan'] ?? null,
                 'is_admin' => $sIsAdmin,
-                'children' => $spouseChildren, // Children specific to this spouse
+                'children' => $spouseChildren,
+                'has_note_for_me' => $this->myNotes->contains(fn($n) => ($n->metadata['sender_id'] ?? null) == $spouse->id)
             ];
         }
 
-        // Remaining children (those not associated with any specific spouse)
         foreach ($myChildrenIds as $childId) {
             $child = $this->allUsers->find($childId);
             if ($child) {
-                $node['children'][] = $this->buildNode($child, $viewingUser, $currentDepth + 1, $maxDepth);
+                $node['children'][] = $this->buildNode($child, $viewingUser, $currentDepth + 1, $maxDepth, $expandedIds);
             }
         }
 

@@ -41,6 +41,7 @@ function formatForInput(dateStr) {
 
 const form = useForm({
   user_id: props.member.id,
+  spouse_id: '', // New field for selecting the other parent
   type: props.type,
   full_name: '',
   email: '',
@@ -175,6 +176,19 @@ function submit() {
           
           <!-- TAB 1: UTAMA -->
           <div v-if="activeTab === 'utama'" class="space-y-10 animate-in slide-in-from-bottom-4 duration-500">
+            
+            <!-- Choice of Parent (Conditional) -->
+            <div v-if="mode === 'create' && type === 'child' && member.spouse?.length > 0" class="bg-blue-50 p-6 rounded-[2rem] border-2 border-blue-100">
+              <label class="block text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3">Orang Tua Lainnya (Opsional)</label>
+              <select v-model="form.spouse_id" class="w-full px-5 py-4 bg-white border-2 border-transparent focus:border-blue-500 rounded-2xl transition-all font-bold text-gray-800 outline-none appearance-none">
+                <option value="">Hanya {{ member.panggilan }} (Single Parent)</option>
+                <option v-for="s in member.spouse" :key="s.id" :value="s.id">
+                  {{ s.full_name }} ({{ s.panggilan }})
+                </option>
+              </select>
+              <p class="text-[9px] text-blue-400 font-bold mt-2 uppercase px-1">Pilih pasangan {{ member.panggilan }} yang merupakan orang tua kandung dari anak ini.</p>
+            </div>
+
             <div class="flex items-center gap-8 bg-gray-50 p-6 rounded-[2rem] border-2 border-dashed border-gray-200">
               <div class="relative flex-shrink-0">
                 <div class="w-24 h-24 rounded-3xl shadow-2xl overflow-hidden bg-white flex items-center justify-center border-4 border-white">

@@ -26,7 +26,13 @@ import {
   Mail,
   Phone,
   Book,
-  Share2
+  Share2,
+  Maximize2,
+  Focus,
+  FileText,
+  History,
+  UploadCloud,
+  Eye
 } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -64,6 +70,66 @@ const canSetHead = computed(() => {
   if (!details.value) return false
   return details.value.can?.set_head
 })
+
+const canUploadIdentity = computed(() => {
+  return details.value?.can?.upload_identity
+})
+
+const identityForm = ref({
+  type: 'ktp',
+  file: null,
+  processing: false
+})
+
+const noteForm = ref({
+  content: '',
+  processing: false
+})
+
+function handleNoteSubmit() {
+  if (!noteForm.value.content.trim()) return
+  
+  noteForm.value.processing = true
+  router.post(`/api/users/${props.node.id}/note`, {
+    content: noteForm.value.content
+  }, {
+    onSuccess: () => {
+      noteForm.value.content = ''
+      noteForm.value.processing = false
+      fetchDetails()
+    },
+    onError: () => {
+      noteForm.value.processing = false
+    }
+  })
+}
+
+function handleIdentityUpload(type) {
+  identityForm.value.type = type
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'image/*'
+  input.onchange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      identityForm.value.processing = true
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('type', type)
+      
+      router.post(`/api/users/${props.node.id}/upload-identity`, formData, {
+        onSuccess: () => {
+          identityForm.value.processing = false
+          fetchDetails()
+        },
+        onError: () => {
+          identityForm.value.processing = false
+        }
+      })
+    }
+  }
+  input.click()
+}
 
 const masterFields = computed(() => page.props.master?.additionalFields || [])
 
@@ -190,10 +256,10 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
 
     <!-- Tabs Navigation -->
     <div class="px-6 flex border-b bg-gray-50/50">
-      <button v-for="tab in ['info', 'settings']" :key="tab" @click="activeTab = tab"
+      <button v-for="tab in ['info', 'berkas', 'settings']" :key="tab" @click="activeTab = tab"
         :class="['px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2', 
           activeTab === tab ? 'border-emerald-600 text-emerald-600 bg-white' : 'border-transparent text-gray-400 hover:text-gray-600']">
-        {{ tab === 'info' ? 'Biodata' : 'Kelola' }}
+        {{ tab === 'info' ? 'Biodata' : (tab === 'berkas' ? 'Berkas' : 'Kelola') }}
       </button>
     </div>
 
@@ -340,6 +406,164 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
               </div>
             </div>
           </div>
+
+          <!-- Focus / Navigation Actions -->
+          <div class="space-y-4 pt-4 border-t border-dashed">
+            <div class="flex items-center gap-2 px-1 text-blue-600">
+              <Maximize2 class="w-4 h-4" />
+              <span class="text-[10px] font-black uppercase tracking-widest">Navigasi Silsilah</span>
+            </div>
+            
+            <div class="grid gap-2 px-1">
+              <Link :href="'/family-tree/' + node.id" 
+                class="w-full py-4 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg flex items-center justify-center gap-3">
+                <Focus class="w-4 h-4" /> Lihat Cabang Ini (Fokus)
+              </Link>
+              
+              <Link v-if="node.id !== rootId" href="/family-tree" 
+                class="w-full py-3 bg-white text-gray-400 hover:text-gray-900 border-2 border-transparent hover:border-gray-100 rounded-2xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-3">
+                <ArrowUpCircle class="w-4 h-4 rotate-180" /> Kembali ke Root
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Berkas (Documents & History) -->
+        <div v-if="activeTab === 'berkas'" class="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500 pb-12">
+          
+          <!-- Identity Documents (KK/KTP) -->
+          <div class="space-y-6">
+            <div class="flex items-center justify-between px-1">
+              <div class="flex items-center gap-2 text-blue-600">
+                <FileText class="w-4 h-4" />
+                <span class="text-[10px] font-black uppercase tracking-widest">Dokumen Identitas</span>
+              </div>
+              <p v-if="!canUploadIdentity" class="text-[8px] font-bold text-gray-400 uppercase">Hanya Pemilik & Anak</p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4">
+              <!-- KK Document -->
+              <div class="bg-gray-50 p-5 rounded-[2rem] border border-gray-100 flex items-center justify-between group">
+                <div class="flex items-center gap-4">
+                  <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-blue-500 shadow-sm"><FileText class="w-6 h-6" /></div>
+                  <div>
+                    <p class="text-xs font-black text-gray-900 uppercase">Kartu Keluarga (KK)</p>
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">
+                      {{ details.attachments.identity.find(a => a.type === 'kk') ? 'Dokumen Tersedia' : 'Belum Diunggah' }}
+                    </p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <a v-if="details.attachments.identity.find(a => a.type === 'kk')" 
+                    :href="'/storage/' + details.attachments.identity.find(a => a.type === 'kk').file_path" 
+                    target="_blank"
+                    class="p-2 bg-blue-100 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all">
+                    <Eye class="w-4 h-4" />
+                  </a>
+                  <button v-if="canUploadIdentity" @click="handleIdentityUpload('kk')" :disabled="identityForm.processing"
+                    class="p-2 bg-white border border-gray-200 text-gray-400 rounded-xl hover:border-blue-600 hover:text-blue-600 transition-all">
+                    <UploadCloud class="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <!-- KTP Document -->
+              <div class="bg-gray-50 p-5 rounded-[2rem] border border-gray-100 flex items-center justify-between group">
+                <div class="flex items-center gap-4">
+                  <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-blue-500 shadow-sm"><FileText class="w-6 h-6" /></div>
+                  <div>
+                    <p class="text-xs font-black text-gray-900 uppercase">KTP / Identitas</p>
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">
+                      {{ details.attachments.identity.find(a => a.type === 'ktp') ? 'Dokumen Tersedia' : 'Belum Diunggah' }}
+                    </p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <a v-if="details.attachments.identity.find(a => a.type === 'ktp')" 
+                    :href="'/storage/' + details.attachments.identity.find(a => a.type === 'ktp').file_path" 
+                    target="_blank"
+                    class="p-2 bg-blue-100 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all">
+                    <Eye class="w-4 h-4" />
+                  </a>
+                  <button v-if="canUploadIdentity" @click="handleIdentityUpload('ktp')" :disabled="identityForm.processing"
+                    class="p-2 bg-white border border-gray-200 text-gray-400 rounded-xl hover:border-blue-600 hover:text-blue-600 transition-all">
+                    <UploadCloud class="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Private Notes Section (Point 9) -->
+          <div class="space-y-6 pt-4 border-t border-dashed">
+            <div class="flex items-center gap-2 px-1 text-amber-600">
+              <Mail class="w-4 h-4" />
+              <span class="text-[10px] font-black uppercase tracking-widest">Catatan Privat</span>
+            </div>
+
+            <!-- Form: Send Note (If viewer is parent) -->
+            <div v-if="details.can.write_note" class="bg-amber-50 p-6 rounded-[2rem] border border-amber-100 space-y-4">
+              <p class="text-[9px] font-black text-amber-600 uppercase tracking-widest">Kirim Catatan untuk {{ details.full_name }}</p>
+              <textarea v-model="noteForm.content" 
+                class="w-full bg-white rounded-2xl p-4 text-xs font-bold text-gray-700 border-none outline-none shadow-sm min-h-[100px] resize-none"
+                placeholder="Tulis pesan rahasia atau catatan penting..."></textarea>
+              <button @click="handleNoteSubmit" :disabled="noteForm.processing || !noteForm.content.trim()"
+                class="w-full py-3 bg-amber-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-lg disabled:opacity-50">
+                Kirim Catatan
+              </button>
+            </div>
+
+            <!-- List: My Notes (If viewing self) -->
+            <div v-if="isOwnAccount" class="space-y-4">
+               <div v-if="details.attachments.notes.length === 0" class="py-8 text-center border-2 border-dashed border-gray-100 rounded-[2rem]">
+                  <p class="text-[10px] text-gray-400 font-black uppercase tracking-widest italic leading-loose px-8">Belum ada catatan dari orang tua.</p>
+               </div>
+               
+               <div v-for="note in details.attachments.notes" :key="note.id" class="bg-white border-2 border-amber-50 p-5 rounded-3xl shadow-sm relative group">
+                  <div class="flex items-center gap-3 mb-3">
+                    <div class="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 font-black text-[10px] uppercase">
+                      {{ note.metadata?.sender_name?.charAt(0) || 'O' }}
+                    </div>
+                    <div>
+                      <p class="text-[9px] font-black text-gray-900 uppercase">Dari: {{ note.metadata?.sender_name || 'Orang Tua' }}</p>
+                      <p class="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">{{ formatDate(note.created_at) }}</p>
+                    </div>
+                  </div>
+                  <p class="text-xs font-bold text-gray-700 leading-relaxed italic border-l-4 border-amber-200 pl-4 bg-amber-50/30 py-2 rounded-r-xl">
+                    "{{ note.content }}"
+                  </p>
+               </div>
+            </div>
+          </div>
+
+          <!-- Profile Photo History -->
+          <div class="space-y-6">
+            <div class="flex items-center gap-2 px-1 text-emerald-600">
+              <History class="w-4 h-4" />
+              <span class="text-[10px] font-black uppercase tracking-widest">Histori Foto Profil</span>
+            </div>
+
+            <div v-if="details.attachments.history.length === 0" class="py-12 text-center border-2 border-dashed border-gray-100 rounded-[2rem]">
+              <p class="text-[10px] text-gray-400 font-black uppercase tracking-widest italic px-12 leading-loose">Belum ada riwayat perubahan foto profil.</p>
+            </div>
+
+            <div v-else class="grid grid-cols-2 gap-4">
+              <div v-for="h in details.attachments.history" :key="h.id" class="relative group">
+                <div class="aspect-square rounded-3xl overflow-hidden border-4 border-gray-50 shadow-sm bg-gray-100">
+                  <img :src="'/storage/' + h.file_path" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                </div>
+                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-3xl">
+                   <a :href="'/storage/' + h.file_path" target="_blank" class="p-3 bg-white text-black rounded-2xl shadow-xl hover:scale-110 transition-all">
+                     <Eye class="w-5 h-5" />
+                   </a>
+                </div>
+                <p class="mt-2 text-[8px] font-black text-gray-400 uppercase tracking-widest text-center">
+                  {{ formatDate(h.created_at) }}
+                </p>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <!-- Tab: Settings -->

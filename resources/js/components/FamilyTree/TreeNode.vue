@@ -16,7 +16,12 @@ import {
   Venus, 
   Heart, 
   Skull, 
-  Briefcase 
+  Briefcase,
+  ChevronLeft,
+  ChevronRight,
+  Layers,
+  MoreHorizontal,
+  Mail
 } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -40,7 +45,22 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['click'])
+const emit = defineEmits(['click', 'switch-spouse', 'expand'])
+
+function handleExpand(e) {
+  e.stopPropagation()
+  emit('expand', props.node.id)
+}
+
+function nextSpouse() {
+  const nextIdx = (props.node.activeSpouseIndex + 1) % props.node.totalSpouseLayers
+  emit('switch-spouse', { nodeId: props.node.id, index: nextIdx })
+}
+
+function prevSpouse() {
+  const prevIdx = (props.node.activeSpouseIndex - 1 + props.node.totalSpouseLayers) % props.node.totalSpouseLayers
+  emit('switch-spouse', { nodeId: props.node.id, index: prevIdx })
+}
 
 // Local Avatar Logic
 const initials = computed(() => {
@@ -177,6 +197,36 @@ const style = computed(() => ({
     <!-- "ME" Badge (TOP RIGHT) -->
     <div v-if="node.panggilan === 'saya' && !isExportMode" class="absolute -top-2 -right-2 w-6 h-6 bg-emerald-600 text-white text-[9px] font-black flex items-center justify-center rounded-full border-2 border-white shadow-lg z-30">
       ME
+    </div>
+
+    <!-- Note Indicator (BOTTOM RIGHT) -->
+    <div v-if="node.has_note_for_me && !isExportMode" class="absolute -bottom-2 -right-2 w-6 h-6 bg-amber-500 text-white rounded-full border-2 border-white shadow-lg flex items-center justify-center z-30 animate-bounce">
+      <Mail class="w-3 h-3 fill-current" />
+    </div>
+
+    <!-- More Indicator (BOTTOM) -->
+    <div 
+      v-if="node.has_more && !isExportMode" 
+      @click="handleExpand"
+      class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-8 h-4 bg-emerald-600 text-white rounded-full border border-white shadow-md flex items-center justify-center z-20 cursor-pointer hover:scale-110 transition-transform"
+    >
+      <MoreHorizontal class="w-3 h-3" />
+    </div>
+
+    <!-- Spouse Layer Navigation (BOTTOM) -->
+    <div v-if="node.type === 'bio' && node.totalSpouseLayers > 1 && !isExportMode" class="absolute -bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1 bg-white border border-slate-200 shadow-lg rounded-full z-30 pointer-events-auto whitespace-nowrap" @click.stop>
+      <button @click="prevSpouse" class="p-1 hover:bg-slate-100 rounded-full transition-colors">
+        <ChevronLeft class="w-3.5 h-3.5 text-slate-600" />
+      </button>
+      
+      <div class="flex items-center gap-1 px-1">
+        <Layers class="w-2.5 h-2.5 text-emerald-600" />
+        <span class="text-[8px] font-black text-slate-500 uppercase tracking-tighter">{{ node.activeSpouseIndex + 1 }} / {{ node.totalSpouseLayers }}</span>
+      </div>
+
+      <button @click="nextSpouse" class="p-0.5 hover:bg-slate-100 rounded-full transition-colors">
+        <ChevronRight class="w-3 h-3 text-slate-600" />
+      </button>
     </div>
   </div>
 </template>

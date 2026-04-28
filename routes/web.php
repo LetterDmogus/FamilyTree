@@ -78,6 +78,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/api/relations', [FamilyTreeController::class, 'storeRelation'])->name('relations.store');
     Route::post('/api/users/{user}/toggle-admin', [FamilyTreeController::class, 'toggleAdmin'])->name('users.toggle-admin');
     Route::post('/api/users/{user}/toggle-head', [FamilyTreeController::class, 'toggleFamilyHead'])->name('users.toggle-head');
+    Route::post('/api/users/{user}/upload-identity', [FamilyTreeController::class, 'uploadIdentity'])->name('users.upload-identity');
+    Route::post('/api/users/{user}/note', [FamilyTreeController::class, 'storeNote'])->name('users.store-note');
 });
 
 require __DIR__.'/settings.php';
