@@ -16,6 +16,7 @@ class UserProfile extends Model
         'death_date',
         'birth_date',
         'birth_place',
+        'death_place',
         'is_family_head',
         'additional_info',
         'social_media',
@@ -26,6 +27,8 @@ class UserProfile extends Model
         'is_alive' => 'boolean',
         'death_date' => 'date',
         'birth_date' => 'date',
+        'birth_place' => 'array',
+        'death_place' => 'array',
         'is_family_head' => 'boolean',
         'additional_info' => 'array',
         'social_media' => 'array',
@@ -40,8 +43,8 @@ class UserProfile extends Model
 
     public function getPhotoUrlAttribute(): ?string
     {
-        return $this->profile_photo_path 
-            ? Storage::disk('public')->url($this->profile_photo_path) 
+        return $this->profile_photo_path
+            ? Storage::disk('public')->url($this->profile_photo_path)
             : null;
     }
 }

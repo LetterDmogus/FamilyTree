@@ -2,6 +2,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useForm } from '@inertiajs/vue3'
 import { Share2 } from 'lucide-vue-next'
+import LocationInput from '@/components/LocationInput.vue'
+import MapModal from '@/components/MapModal.vue'
 
 const props = defineProps({
   mode: {
@@ -49,7 +51,8 @@ const form = useForm({
   is_alive: true,
   death_date: '',
   birth_date: '',
-  birth_place: '',
+  birth_place: { country: '', province: '', city: '', address: '', lat: -6.2, lng: 106.81 },
+  death_place: { country: '', province: '', city: '', address: '', lat: -6.2, lng: 106.81 },
   profile_photo: null,
   additional_info: {}, 
   social_media: [],
@@ -66,7 +69,8 @@ onMounted(() => {
     form.is_alive = profile.is_alive ?? true
     form.death_date = formatForInput(profile.death_date)
     form.birth_date = formatForInput(profile.birth_date)
-    form.birth_place = profile.birth_place || ''
+    form.birth_place = profile.birth_place || { country: '', province: '', city: '', address: '', lat: -6.2, lng: 106.81 }
+    form.death_place = profile.death_place || { country: '', province: '', city: '', address: '', lat: -6.2, lng: 106.81 }
     form.additional_info = { ...(profile.additional_info || {}) }
     form.social_media = profile.social_media || []
     photoPreview.value = profile.photo_url || profile.profile_photo_path ? `/storage/${profile.profile_photo_path}` : null
@@ -239,9 +243,9 @@ function submit() {
                 </div>
               </div>
 
-              <div>
+              <div class="md:col-span-2">
                 <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tempat Lahir</label>
-                <input v-model="form.birth_place" type="text" class="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl transition-all font-bold text-gray-800 outline-none" required />
+                <LocationInput v-model="form.birth_place" />
               </div>
 
               <div>
@@ -249,9 +253,15 @@ function submit() {
                 <input v-model="form.birth_date" type="date" class="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl transition-all font-bold text-gray-800 outline-none" required />
               </div>
 
-              <div v-if="!form.is_alive" class="md:col-span-2 animate-in slide-in-from-top-2">
-                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tanggal Wafat</label>
-                <input v-model="form.death_date" type="date" class="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-red-500 focus:bg-white rounded-2xl transition-all font-bold text-gray-800 outline-none" />
+              <div v-if="!form.is_alive" class="md:col-span-2 space-y-6 animate-in slide-in-from-top-2">
+                <div>
+                  <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tanggal Wafat</label>
+                  <input v-model="form.death_date" type="date" class="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-red-500 focus:bg-white rounded-2xl transition-all font-bold text-gray-800 outline-none" />
+                </div>
+                <div>
+                  <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tempat Wafat</label>
+                  <LocationInput v-model="form.death_place" />
+                </div>
               </div>
             </div>
           </div>

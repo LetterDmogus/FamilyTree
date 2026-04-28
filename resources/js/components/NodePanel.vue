@@ -34,6 +34,7 @@ import {
   UploadCloud,
   Eye
 } from 'lucide-vue-next'
+import MapModal from './MapModal.vue'
 
 const props = defineProps({
   node: { type: Object, required: true },
@@ -41,6 +42,16 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['add-relation', 'edit-profile', 'close', 'node-click'])
+
+const isMapOpen = ref(false)
+const mapData = ref(null)
+const mapTitle = ref('')
+
+const openMap = (title, data) => {
+  mapTitle.value = title
+  mapData.value = data
+  isMapOpen.value = true
+}
 
 const details = ref(null)
 const activeTab = ref('info')
@@ -304,14 +315,39 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
                 <div>
                   <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Lahir</label>
                   <p class="text-xs font-bold text-gray-700">{{ formatDate(details.profile.birth_date) }}</p>
-                  <p v-if="details.profile.birth_place" class="text-[10px] font-bold text-gray-400 mt-0.5 flex items-center gap-1"><MapPin class="w-3 h-3" /> {{ details.profile.birth_place }}</p>
+                  <div 
+                    v-if="details.profile.birth_place" 
+                    @click="openMap(`Tempat Lahir ${details.full_name}`, details.profile.birth_place)"
+                    class="text-[10px] font-bold text-gray-400 mt-0.5 flex items-center gap-1 cursor-pointer hover:text-emerald-600 transition-colors"
+                  >
+                    <MapPin class="w-3 h-3" /> 
+                    <span>
+                      <template v-if="typeof details.profile.birth_place === 'object'">
+                        {{ details.profile.birth_place.city || details.profile.birth_place.country || 'Lihat Peta' }}
+                      </template>
+                      <template v-else>{{ details.profile.birth_place }}</template>
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div v-if="!details.profile.is_alive && details.profile.death_date" class="flex gap-4">
+              <div v-if="!details.profile.is_alive && (details.profile.death_date || details.profile.death_place)" class="flex gap-4">
                 <div class="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-500 flex-shrink-0"><Skull class="w-5 h-5" /></div>
                 <div>
                   <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Wafat</label>
-                  <p class="text-xs font-bold text-gray-700">{{ formatDate(details.profile.death_date) }}</p>
+                  <p v-if="details.profile.death_date" class="text-xs font-bold text-gray-700">{{ formatDate(details.profile.death_date) }}</p>
+                  <div 
+                    v-if="details.profile.death_place" 
+                    @click="openMap(`Tempat Wafat ${details.full_name}`, details.profile.death_place)"
+                    class="text-[10px] font-bold text-gray-400 mt-0.5 flex items-center gap-1 cursor-pointer hover:text-slate-800 transition-colors"
+                  >
+                    <MapPin class="w-3 h-3" /> 
+                    <span>
+                      <template v-if="typeof details.profile.death_place === 'object'">
+                        {{ details.profile.death_place.city || details.profile.death_place.country || 'Lihat Peta' }}
+                      </template>
+                      <template v-else>{{ details.profile.death_place }}</template>
+                    </span>
+                  </div>
                 </div>
               </div>
               <div v-if="details.profile.additional_info?.pekerjaan" class="flex gap-4">
@@ -638,6 +674,13 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
         </div>
       </div>
     </div>
+    
+    <MapModal 
+      :open="isMapOpen" 
+      @update:open="isMapOpen = $event" 
+      :title="mapTitle" 
+      :location-data="mapData" 
+    />
   </div>
 </template>
 
