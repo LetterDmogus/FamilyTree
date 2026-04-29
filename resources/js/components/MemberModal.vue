@@ -1,9 +1,10 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
 import { useForm } from '@inertiajs/vue3'
-import { Share2 } from 'lucide-vue-next'
+import { User as UserIcon, MapPin, Camera, Loader2, ChevronDown, ChevronUp, Baby, Skull } from 'lucide-vue-next'
+import { ref, computed, onMounted } from 'vue'
 import LocationInput from '@/components/LocationInput.vue'
-import MapModal from '@/components/MapModal.vue'
+
+let faceapi = null
 
 const props = defineProps({
   mode: {
@@ -26,15 +27,68 @@ const props = defineProps({
 
 const emit = defineEmits(['close'])
 
-const activeTab = ref('utama')
+const activeTab = ref('profil')
 const photoPreview = ref(null)
 const fieldSearch = ref('')
+const isVerifyingFace = ref(false)
+const modelsLoaded = ref(false)
+const showBirthLocation = ref(false)
+const showCurrentLocation = ref(false)
+const showDeathLocation = ref(false)
+
+// --- WIZARD FLOW ---
+const tabs = ['profil', 'lokasi', 'tambahan', 'sosmed']
+const currentIndex = computed(() => tabs.indexOf(activeTab.value))
+const isFirstStep = computed(() => currentIndex.value === 0)
+const isLastStep = computed(() => currentIndex.value === tabs.length - 1)
+
+function nextStep() {
+  if (!isLastStep.value) {
+    activeTab.value = tabs[currentIndex.value + 1]
+  }
+}
+
+function prevStep() {
+  if (!isFirstStep.value) {
+    activeTab.value = tabs[currentIndex.value - 1]
+  }
+}
+
+// --- RECOMMENDATIONS ---
+const recommendations = computed(() => {
+  const commonFields = ['NIK', 'Pekerjaan', 'Pendidikan', 'Agama', 'Golongan Darah']
+  
+  return props.master.additionalFields.filter(f => 
+    commonFields.includes(f.name) && !Object.keys(form.additional_info).includes(f.name)
+  )
+})
+
+async function loadModels() {
+  if (modelsLoaded.value) {
+return
+}
+
+  try {
+    if (!faceapi) {
+      faceapi = await import('@vladmandic/face-api')
+    }
+
+    await faceapi.nets.tinyFaceDetector.loadFromUri('/models')
+    modelsLoaded.value = true
+  } catch (e) {
+    console.error('Gagal memuat model face-api:', e)
+  }
+}
 
 // Helper to format date for input[type=date]
 function formatForInput(dateStr) {
-  if (!dateStr) return ''
+  if (!dateStr) {
+return ''
+}
+
   try {
     const date = new Date(dateStr)
+
     return date.toISOString().split('T')[0]
   } catch (e) {
     return ''
@@ -53,6 +107,7 @@ const form = useForm({
   birth_date: '',
   birth_place: { country: '', province: '', city: '', address: '', lat: -6.2, lng: 106.81 },
   death_place: { country: '', province: '', city: '', address: '', lat: -6.2, lng: 106.81 },
+  current_address: { country: '', province: '', city: '', address: '', lat: -6.2, lng: 106.81 },
   profile_photo: null,
   additional_info: {}, 
   social_media: [],
@@ -71,9 +126,21 @@ onMounted(() => {
     form.birth_date = formatForInput(profile.birth_date)
     form.birth_place = profile.birth_place || { country: '', province: '', city: '', address: '', lat: -6.2, lng: 106.81 }
     form.death_place = profile.death_place || { country: '', province: '', city: '', address: '', lat: -6.2, lng: 106.81 }
+    form.current_address = profile.current_address || { country: '', province: '', city: '', address: '', lat: -6.2, lng: 106.81 }
     form.additional_info = { ...(profile.additional_info || {}) }
     form.social_media = profile.social_media || []
     photoPreview.value = profile.photo_url || profile.profile_photo_path ? `/storage/${profile.profile_photo_path}` : null
+  } else if (props.mode === 'create' && props.member) {
+    // Pre-fill from extraction if available
+    form.full_name = props.member.full_name || ''
+    form.email = props.member.email || ''
+    form.gender = props.member.gender || 'M'
+    form.birth_date = formatForInput(props.member.birth_date)
+    form.birth_place = props.member.birth_place || { country: 'Indonesia', province: '', city: '', address: '', lat: -6.2, lng: 106.81 }
+
+    if (props.member.additional_info) {
+        form.additional_info = { ...props.member.additional_info }
+    }
   }
 })
 
@@ -89,7 +156,10 @@ const icons = {
 }
 
 const filteredMasterFields = computed(() => {
-  if (!fieldSearch.value) return props.master.additionalFields
+  if (!fieldSearch.value) {
+return props.master.additionalFields
+}
+
   return props.master.additionalFields.filter(f => 
     f.name.toLowerCase().includes(fieldSearch.value.toLowerCase())
   )
@@ -119,13 +189,36 @@ function removeSocialMedia(index) {
   form.social_media.splice(index, 1)
 }
 
-function handlePhotoChange(e) {
+async function handlePhotoChange(e) {
   const file = e.target.files[0]
-  if (file) {
+
+  if (!file) {
+return
+}
+
+  isVerifyingFace.value = true
+  await loadModels()
+
+  try {
+    const img = await faceapi.bufferToImage(file)
+    const detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+
+    if (!detection) {
+      alert('Wajah tidak terdeteksi. Silakan gunakan foto yang memperlihatkan wajah dengan jelas.')
+      e.target.value = ''
+
+      return
+    }
+
     form.profile_photo = file
     const reader = new FileReader()
     reader.onload = (e) => photoPreview.value = e.target.result
     reader.readAsDataURL(file)
+  } catch (err) {
+    console.error('Error saat verifikasi wajah:', err)
+    alert('Terjadi kesalahan saat memproses foto.')
+  } finally {
+    isVerifyingFace.value = false
   }
 }
 
@@ -168,7 +261,7 @@ function submit() {
 
       <!-- Tab Strip -->
       <div class="flex px-8 bg-gray-50/50 border-b border-gray-100 flex-shrink-0">
-        <button v-for="tab in ['utama', 'tambahan', 'sosmed']" :key="tab" @click="activeTab = tab" 
+        <button v-for="tab in ['profil', 'lokasi', 'tambahan', 'sosmed']" :key="tab" @click="activeTab = tab" 
           :class="['px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2', activeTab === tab ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400 hover:text-gray-600']">
           {{ tab }}
         </button>
@@ -178,11 +271,11 @@ function submit() {
       <div class="flex-1 overflow-y-auto custom-scrollbar bg-white">
         <form @submit.prevent="submit" class="p-8 pb-12">
           
-          <!-- TAB 1: UTAMA -->
-          <div v-if="activeTab === 'utama'" class="space-y-10 animate-in slide-in-from-bottom-4 duration-500">
+          <!-- TAB 1: PROFIL -->
+          <div v-if="activeTab === 'profil'" class="space-y-10 animate-in slide-in-from-bottom-4 duration-500">
             
             <!-- Choice of Parent (Conditional) -->
-            <div v-if="mode === 'create' && type === 'child' && member.spouse?.length > 0" class="bg-blue-50 p-6 rounded-[2rem] border-2 border-blue-100">
+            <div v-if="mode === 'create' && type === 'child' && member.spouse?.length > 0" class="bg-blue-50 p-6 rounded-[2rem] border-2 border-blue-100 text-left">
               <label class="block text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3">Orang Tua Lainnya (Opsional)</label>
               <select v-model="form.spouse_id" class="w-full px-5 py-4 bg-white border-2 border-transparent focus:border-blue-500 rounded-2xl transition-all font-bold text-gray-800 outline-none appearance-none">
                 <option value="">Hanya {{ member.panggilan }} (Single Parent)</option>
@@ -193,20 +286,20 @@ function submit() {
               <p class="text-[9px] text-blue-400 font-bold mt-2 uppercase px-1">Pilih pasangan {{ member.panggilan }} yang merupakan orang tua kandung dari anak ini.</p>
             </div>
 
-            <div class="flex items-center gap-8 bg-gray-50 p-6 rounded-[2rem] border-2 border-dashed border-gray-200">
+            <div class="flex items-center gap-8 bg-gray-50 p-6 rounded-[2rem] border-2 border-dashed border-gray-200 text-left">
               <div class="relative flex-shrink-0">
                 <div class="w-24 h-24 rounded-3xl shadow-2xl overflow-hidden bg-white flex items-center justify-center border-4 border-white">
-                  <img v-if="photoPreview" :src="photoPreview" class="w-full h-full object-cover" />
+                  <img v-if="photoPreview" :src="photoPreview" :class="['w-full h-full object-cover', isVerifyingFace ? 'opacity-50 grayscale' : '']" />
                   <div v-else class="text-gray-300">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
+                    <UserIcon class="h-10 w-10" />
+                  </div>
+                  <!-- Loading Overlay -->
+                  <div v-if="isVerifyingFace" class="absolute inset-0 flex items-center justify-center bg-white/40">
+                    <Loader2 class="w-8 h-8 text-emerald-600 animate-spin" />
                   </div>
                 </div>
-                <label class="absolute -bottom-2 -right-2 p-2 bg-emerald-600 text-white rounded-xl shadow-xl cursor-pointer hover:bg-emerald-700 transition-all hover:scale-110">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                  </svg>
+                <label v-if="!isVerifyingFace" class="absolute -bottom-2 -right-2 p-2 bg-emerald-600 text-white rounded-xl shadow-xl cursor-pointer hover:bg-emerald-700 transition-all hover:scale-110">
+                  <Camera class="h-4 w-4" />
                   <input type="file" @change="handlePhotoChange" class="hidden" accept="image/*" />
                 </label>
               </div>
@@ -243,25 +336,81 @@ function submit() {
                 </div>
               </div>
 
-              <div class="md:col-span-2">
-                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tempat Lahir</label>
-                <LocationInput v-model="form.birth_place" />
-              </div>
-
-              <div>
+              <div :class="form.is_alive ? 'md:col-span-2' : ''">
                 <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tanggal Lahir</label>
                 <input v-model="form.birth_date" type="date" class="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl transition-all font-bold text-gray-800 outline-none" required />
               </div>
 
-              <div v-if="!form.is_alive" class="md:col-span-2 space-y-6 animate-in slide-in-from-top-2">
-                <div>
-                  <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tanggal Wafat</label>
-                  <input v-model="form.death_date" type="date" class="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-red-500 focus:bg-white rounded-2xl transition-all font-bold text-gray-800 outline-none" />
+              <div v-if="!form.is_alive">
+                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tanggal Wafat</label>
+                <input v-model="form.death_date" type="date" class="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-red-500 focus:bg-white rounded-2xl transition-all font-bold text-gray-800 outline-none" />
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: LOKASI -->
+          <div v-if="activeTab === 'lokasi'" class="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+            
+            <!-- Accordion 1: Tempat Lahir -->
+            <div class="space-y-4">
+              <button type="button" @click="showBirthLocation = !showBirthLocation" 
+                class="w-full flex items-center justify-between p-5 bg-emerald-50 border-2 border-emerald-100 rounded-[2rem] hover:bg-emerald-100 transition-all group">
+                <div class="flex items-center gap-4 text-left">
+                  <div class="w-10 h-10 bg-white text-emerald-600 rounded-2xl flex items-center justify-center shadow-sm">
+                    <Baby class="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 class="text-xs font-black text-emerald-900 uppercase tracking-widest">Tempat Lahir</h4>
+                    <p class="text-[9px] font-bold text-emerald-400 uppercase mt-0.5">Asal usul kelahiran</p>
+                  </div>
                 </div>
-                <div>
-                  <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tempat Wafat</label>
-                  <LocationInput v-model="form.death_place" />
+                <ChevronDown v-if="!showBirthLocation" class="w-5 h-5 text-emerald-400" />
+                <ChevronUp v-else class="w-5 h-5 text-emerald-400" />
+              </button>
+              <div v-if="showBirthLocation" class="p-2 animate-in slide-in-from-top-2">
+                <LocationInput v-model="form.birth_place" />
+              </div>
+            </div>
+
+            <!-- Accordion 2: Alamat Saat Ini -->
+            <div v-if="form.is_alive" class="space-y-4">
+              <button type="button" @click="showCurrentLocation = !showCurrentLocation" 
+                class="w-full flex items-center justify-between p-5 bg-blue-50 border-2 border-blue-100 rounded-[2rem] hover:bg-blue-100 transition-all group">
+                <div class="flex items-center gap-4 text-left">
+                  <div class="w-10 h-10 bg-white text-blue-600 rounded-2xl flex items-center justify-center shadow-sm">
+                    <MapPin class="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 class="text-xs font-black text-blue-900 uppercase tracking-widest">Alamat Saat Ini</h4>
+                    <p class="text-[9px] font-bold text-blue-400 uppercase mt-0.5">Domisili sekarang</p>
+                  </div>
                 </div>
+                <ChevronDown v-if="!showCurrentLocation" class="w-5 h-5 text-blue-400" />
+                <ChevronUp v-else class="w-5 h-5 text-blue-400" />
+              </button>
+              <div v-if="showCurrentLocation" class="p-2 animate-in slide-in-from-top-2">
+                <LocationInput v-model="form.current_address" />
+              </div>
+            </div>
+
+            <!-- Accordion 3: Tempat Wafat -->
+            <div v-if="!form.is_alive" class="space-y-4">
+              <button type="button" @click="showDeathLocation = !showDeathLocation" 
+                class="w-full flex items-center justify-between p-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] hover:bg-slate-100 transition-all group">
+                <div class="flex items-center gap-4 text-left">
+                  <div class="w-10 h-10 bg-white text-slate-600 rounded-2xl flex items-center justify-center shadow-sm">
+                    <Skull class="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 class="text-xs font-black text-slate-900 uppercase tracking-widest">Tempat Wafat</h4>
+                    <p class="text-[9px] font-bold text-slate-400 uppercase mt-0.5">Lokasi peristirahatan terakhir</p>
+                  </div>
+                </div>
+                <ChevronDown v-if="!showDeathLocation" class="w-5 h-5 text-slate-400" />
+                <ChevronUp v-else class="w-5 h-5 text-slate-400" />
+              </button>
+              <div v-if="showDeathLocation" class="p-2 animate-in slide-in-from-top-2">
+                <LocationInput v-model="form.death_place" />
               </div>
             </div>
           </div>
@@ -285,6 +434,15 @@ function submit() {
                   {{ field.name }} ({{ field.input_type }})
                 </button>
                 <div v-if="filteredMasterFields.length === 0" class="p-4 text-center text-[10px] font-black text-gray-300 uppercase">Tidak ditemukan</div>
+              </div>
+
+              <!-- Recommendations -->
+              <div v-if="recommendations.length > 0 && !fieldSearch" class="mt-4 flex flex-wrap gap-2 animate-in fade-in duration-500">
+                <span class="w-full text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Rekomendasi Data:</span>
+                <button v-for="field in recommendations" :key="field.id" type="button" @click="addAdditionalField(field)" 
+                  class="px-3 py-1.5 bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-widest rounded-lg border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all">
+                  + {{ field.name }}
+                </button>
               </div>
             </div>
 
@@ -384,10 +542,20 @@ function submit() {
 
       <!-- Sticky Footer -->
       <div class="p-8 border-t bg-white flex gap-4 flex-shrink-0">
-        <button type="button" @click="$emit('close')" class="flex-1 px-6 py-5 border-2 border-gray-100 text-gray-400 rounded-3xl font-black uppercase text-[10px] hover:bg-gray-50 hover:text-gray-600 transition-all tracking-widest">
+        <button v-if="isFirstStep" type="button" @click="$emit('close')" class="flex-1 px-6 py-5 border-2 border-gray-100 text-gray-400 rounded-3xl font-black uppercase text-[10px] hover:bg-gray-50 hover:text-gray-600 transition-all tracking-widest">
           Batal
         </button>
-        <button @click="submit" :disabled="form.processing" class="flex-[2] px-6 py-5 bg-gray-900 text-white rounded-3xl font-black uppercase text-[10px] hover:bg-emerald-600 transition-all tracking-widest disabled:opacity-50 shadow-xl shadow-gray-200">
+        <button v-else type="button" @click="prevStep" class="flex-1 px-6 py-5 border-2 border-gray-100 text-gray-400 rounded-3xl font-black uppercase text-[10px] hover:bg-gray-50 hover:text-gray-600 transition-all tracking-widest">
+          Kembali
+        </button>
+
+        <button v-if="!isLastStep" type="button" @click="nextStep" class="flex-[2] px-6 py-5 bg-gray-900 text-white rounded-3xl font-black uppercase text-[10px] hover:bg-emerald-600 transition-all tracking-widest shadow-xl shadow-gray-200 flex items-center justify-center gap-2">
+          Selanjutnya
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </button>
+        <button v-else @click="submit" :disabled="form.processing" class="flex-[2] px-6 py-5 bg-emerald-600 text-white rounded-3xl font-black uppercase text-[10px] hover:bg-emerald-700 transition-all tracking-widest disabled:opacity-50 shadow-xl shadow-emerald-200">
           {{ form.processing ? 'Sedang Menyimpan...' : (mode === 'create' ? 'Simpan Anggota Baru' : 'Simpan Perubahan') }}
         </button>
       </div>

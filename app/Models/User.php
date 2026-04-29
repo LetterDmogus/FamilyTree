@@ -3,28 +3,30 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Traits\LogsActivity;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
-use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'google_id', 'login_code', 'login_code_expires_at'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasRoles, Notifiable, SoftDeletes, TwoFactorAuthenticatable, LogsActivity;
+    use HasFactory, HasRoles, LogsActivity, Notifiable, SoftDeletes, TwoFactorAuthenticatable;
 
     protected static function booted()
     {
         static::deleting(function (User $user) {
-            \Illuminate\Support\Facades\DB::transaction(function () use ($user) {
+            DB::transaction(function () use ($user) {
                 // If Family Head is deleted, cascade delete children and spouses
                 if ($user->profile?->is_family_head) {
                     // 1. Delete children (bloodline)
@@ -39,7 +41,7 @@ class User extends Authenticatable
                 } else {
                     // Normal Tree Healing & Succession Logic for non-head members
                     // (Previous logic for regular members)
-                    
+
                     // 1. Succession Planning (If this user was somehow a head but not global head)
                     if ($user->profile?->is_family_head) {
                         $successor = $user->spouse()->first() ?? $user->children()
@@ -80,8 +82,8 @@ class User extends Authenticatable
                 Relation::where('user_id', $user->id)
                     ->orWhere('related_user_id', $user->id)
                     ->delete();
-                
-                \Illuminate\Support\Facades\Cache::flush();
+
+                Cache::flush();
             });
         });
     }
@@ -94,6 +96,26 @@ class User extends Authenticatable
     public function attachments()
     {
         return $this->hasMany(UserAttachment::class);
+    }
+
+    public function familyEvents()
+    {
+        return $this->hasMany(FamilyEvent::class);
+    }
+
+    public function rsvps()
+    {
+        return $this->hasMany(EventRsvp::class);
+    }
+
+    public function sentLetters()
+    {
+        return $this->hasMany(FamilyLetter::class, 'sender_id');
+    }
+
+    public function receivedLetters()
+    {
+        return $this->hasMany(FamilyLetter::class, 'recipient_id');
     }
 
     public function children()
@@ -167,6 +189,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'login_code_expires_at' => 'datetime',
         ];
     }
 }

@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { X, Send, Loader2, Sparkles, BrainCircuit, Trash2, Minimize2 } from 'lucide-vue-next';
 import { ref, watch, nextTick, onMounted } from 'vue';
 import { useSidePanels } from '@/composables/useSidePanels';
-import { X, Send, Loader2, Sparkles, BrainCircuit, Trash2, Minimize2 } from 'lucide-vue-next';
-import { queryFamily, getSummary, FamilyMember } from '@/lib/queryEngine';
+import type { FamilyMember } from '@/lib/queryEngine';
+import { queryFamily, getSummary } from '@/lib/queryEngine';
 
 const props = defineProps<{
     treeData: FamilyMember;
@@ -20,6 +21,7 @@ const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 // Auto-scroll to bottom
 const scrollToBottom = async () => {
     await nextTick();
+
     if (chatContainer.value) {
         chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
     }
@@ -27,6 +29,7 @@ const scrollToBottom = async () => {
 
 const getSystemPrompt = () => {
     const summary = getSummary(props.treeData);
+
     return `You are "Wise Mystical Tree", a helpful family tree assistant. 
 The user is viewing their family tree application.
 You have access to tools to query the family data.
@@ -45,7 +48,9 @@ ${JSON.stringify(summary, null, 2)}
 };
 
 async function sendMessage() {
-    if (!inputMessage.value.trim() || isProcessing.value) return;
+    if (!inputMessage.value.trim() || isProcessing.value) {
+return;
+}
 
     const userMsg = inputMessage.value.trim();
     
@@ -53,12 +58,14 @@ async function sendMessage() {
     if (userMsg === '/clear') {
         messages.value = [];
         inputMessage.value = '';
+
         return;
     }
     
     if (userMsg === '/compact') {
         await compactHistory();
         inputMessage.value = '';
+
         return;
     }
 
@@ -75,6 +82,7 @@ async function sendMessage() {
     while (attempts < maxRetries && !success) {
         try {
             attempts++;
+
             if (attempts > 1) {
                 currentThought.value = `Terjadi error, mencoba mengirim ulang (${attempts}/${maxRetries})...`;
             } else {
@@ -85,6 +93,7 @@ async function sendMessage() {
             success = true;
         } catch (error) {
             console.error(`Attempt ${attempts} failed:`, error);
+
             if (attempts === maxRetries) {
                 messages.value.push({ 
                     role: 'assistant', 
@@ -103,7 +112,9 @@ async function sendMessage() {
 }
 
 async function compactHistory() {
-    if (messages.value.length < 2) return;
+    if (messages.value.length < 2) {
+return;
+}
     
     isProcessing.value = true;
     currentThought.value = 'Meringkas percakapan...';
@@ -171,7 +182,7 @@ async function processChat() {
         }
     ];
 
-    let apiMessages = [
+    const apiMessages = [
         { role: 'system', content: getSystemPrompt() },
         ...messages.value.filter(m => m.role !== 'tool').map(m => ({ role: m.role, content: m.content }))
     ];
@@ -191,12 +202,16 @@ async function processChat() {
     });
 
     const data = await response.json();
-    if (data.error) throw new Error(data.error.message);
+
+    if (data.error) {
+throw new Error(data.error.message);
+}
     
     const message = data.choices[0].message;
 
     if (message.tool_calls) {
         const toolResults = [];
+
         for (const toolCall of message.tool_calls) {
             const args = JSON.parse(toolCall.function.arguments);
             currentThought.value = `Menjalankan: ${toolCall.function.name} - ${args.operations.map((o: any) => o.op).join(' → ')}`;

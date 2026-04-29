@@ -31,7 +31,7 @@ class DashboardController extends Controller
                     'day' => $profile->birth_date->day,
                     'month' => $profile->birth_date->month,
                     'type' => 'birth',
-                    'label' => 'Ulang Tahun: ' . ($profile->full_name ?? $profile->user->name),
+                    'label' => 'Ulang Tahun: '.($profile->full_name ?? $profile->user->name),
                     'user' => $profile->full_name ?? $profile->user->name,
                 ];
             });
@@ -46,7 +46,7 @@ class DashboardController extends Controller
                     'day' => $profile->death_date->day,
                     'month' => $profile->death_date->month,
                     'type' => 'death',
-                    'label' => 'Mengenang: ' . ($profile->full_name ?? $profile->user->name),
+                    'label' => 'Mengenang: '.($profile->full_name ?? $profile->user->name),
                     'user' => $profile->full_name ?? $profile->user->name,
                 ];
             });
@@ -58,7 +58,7 @@ class DashboardController extends Controller
                 'day' => $user->created_at->day,
                 'month' => $user->created_at->month,
                 'type' => 'join',
-                'label' => 'Bergabung: ' . $user->name,
+                'label' => 'Bergabung: '.$user->name,
                 'user' => $user->name,
             ];
         });

@@ -1,8 +1,7 @@
 <?php
 
-use App\Models\User;
-use App\Models\UserProfile;
 use App\Models\Relation;
+use App\Models\User;
 use App\Services\FamilyTreeService;
 use App\Services\RelationshipCalculator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -18,7 +17,7 @@ test('family tree service builds a 3-tier tree', function () {
     Relation::create(['user_id' => $kakek->id, 'related_user_id' => $ayah->id, 'type' => 'child']);
     Relation::create(['user_id' => $ayah->id, 'related_user_id' => $anak->id, 'type' => 'child']);
 
-    $service = new FamilyTreeService(new RelationshipCalculator());
+    $service = new FamilyTreeService(new RelationshipCalculator);
     $tree = $service->buildTree($kakek, $kakek);
 
     expect($tree['full_name'])->toBe('Kakek');
@@ -34,8 +33,8 @@ test('relationship calculator identifies child and parent', function () {
 
     Relation::create(['user_id' => $parent->id, 'related_user_id' => $child->id, 'type' => 'child']);
 
-    $calculator = new RelationshipCalculator();
-    
+    $calculator = new RelationshipCalculator;
+
     expect($calculator->calculate($parent, $child))->toBe('Anak Laki-laki');
     expect($calculator->calculate($child, $parent))->toBe('Ayah'); // Default M
 });
@@ -48,15 +47,15 @@ test('relationship calculator identifies siblings', function () {
     Relation::create(['user_id' => $parent->id, 'related_user_id' => $child1->id, 'type' => 'child']);
     Relation::create(['user_id' => $parent->id, 'related_user_id' => $child2->id, 'type' => 'child']);
 
-    $calculator = new RelationshipCalculator();
-    
+    $calculator = new RelationshipCalculator;
+
     expect($calculator->calculate($child1, $child2))->toBe('Saudara Kandung'); // No birth dates in factory
 });
 
 test('relationship calculator identifies self as saya', function () {
     $user = User::factory()->create();
-    $calculator = new RelationshipCalculator();
-    
+    $calculator = new RelationshipCalculator;
+
     expect($calculator->calculate($user, $user))->toBe('saya');
 });
 
@@ -67,8 +66,8 @@ test('relationship calculator identifies step-child and step-parent', function (
     // Step-child relationship
     Relation::create(['user_id' => $parent->id, 'related_user_id' => $child->id, 'type' => 'child', 'is_blood' => false]);
 
-    $calculator = new RelationshipCalculator();
-    
+    $calculator = new RelationshipCalculator;
+
     expect($calculator->calculate($parent, $child))->toBe('Anak Tiri Laki-laki');
     expect($calculator->calculate($child, $parent))->toBe('Ayah Tiri');
 });

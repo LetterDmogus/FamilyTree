@@ -1,5 +1,4 @@
 <script setup>
-import { ref, watch, computed } from 'vue'
 import { useHttp, usePage, Link, router } from '@inertiajs/vue3'
 import { 
   Shield, 
@@ -34,16 +33,20 @@ import {
   UploadCloud,
   Eye
 } from 'lucide-vue-next'
+import { ref, watch, computed } from 'vue'
+import ComposeLetterModal from './FamilyTree/ComposeLetterModal.vue'
 import MapModal from './MapModal.vue'
+
 
 const props = defineProps({
   node: { type: Object, required: true },
   rootId: { type: Number, required: true }
 })
 
-const emit = defineEmits(['add-relation', 'edit-profile', 'close', 'node-click'])
+const emit = defineEmits(['add-relation', 'edit-profile', 'close', 'node-click', 'open-article'])
 
 const isMapOpen = ref(false)
+const isComposeOpen = ref(false)
 const mapData = ref(null)
 const mapTitle = ref('')
 
@@ -63,22 +66,34 @@ const isOwnAccount = computed(() => {
 })
 
 const canManage = computed(() => {
-  if (!details.value) return false
+  if (!details.value) {
+return false
+}
+
   return details.value.can?.edit
 })
 
 const canDelete = computed(() => {
-  if (!details.value) return false
+  if (!details.value) {
+return false
+}
+
   return details.value.can?.delete
 })
 
 const canToggleAdmin = computed(() => {
-  if (!details.value) return false
+  if (!details.value) {
+return false
+}
+
   return details.value.can?.toggle_admin
 })
 
 const canSetHead = computed(() => {
-  if (!details.value) return false
+  if (!details.value) {
+return false
+}
+
   return details.value.can?.set_head
 })
 
@@ -92,29 +107,6 @@ const identityForm = ref({
   processing: false
 })
 
-const noteForm = ref({
-  content: '',
-  processing: false
-})
-
-function handleNoteSubmit() {
-  if (!noteForm.value.content.trim()) return
-  
-  noteForm.value.processing = true
-  router.post(`/api/users/${props.node.id}/note`, {
-    content: noteForm.value.content
-  }, {
-    onSuccess: () => {
-      noteForm.value.content = ''
-      noteForm.value.processing = false
-      fetchDetails()
-    },
-    onError: () => {
-      noteForm.value.processing = false
-    }
-  })
-}
-
 function handleIdentityUpload(type) {
   identityForm.value.type = type
   const input = document.createElement('input')
@@ -122,6 +114,7 @@ function handleIdentityUpload(type) {
   input.accept = 'image/*'
   input.onchange = (e) => {
     const file = e.target.files[0]
+
     if (file) {
       identityForm.value.processing = true
       const formData = new FormData()
@@ -146,19 +139,26 @@ const masterFields = computed(() => page.props.master?.additionalFields || [])
 
 // Logic to group user additional info based on Master Groups
 const groupedAdditionalInfo = computed(() => {
-  if (!details.value?.profile?.additional_info || masterFields.value.length === 0) return {}
+  if (!details.value?.profile?.additional_info || masterFields.value.length === 0) {
+return {}
+}
 
   const info = details.value.profile.additional_info
   const groups = {}
 
   // 1. Map existing info to their master config
   Object.entries(info).forEach(([key, value]) => {
-    if (!value || key === 'pekerjaan') return // Skip empty or special fields
+    if (!value || key === 'pekerjaan') {
+return
+} // Skip empty or special fields
 
     const fieldConfig = masterFields.value.find(f => f.name === key)
     const groupName = fieldConfig ? fieldConfig.group_name : 'Lainnya'
 
-    if (!groups[groupName]) groups[groupName] = []
+    if (!groups[groupName]) {
+groups[groupName] = []
+}
+
     groups[groupName].push({
       label: key,
       value: value,
@@ -171,9 +171,13 @@ const groupedAdditionalInfo = computed(() => {
 })
 
 function getFullSocialUrl(sm) {
-  if (!sm.prefix || sm.prefix === 'none') return null
+  if (!sm.prefix || sm.prefix === 'none') {
+return null
+}
+
   const cleanPrefix = sm.prefix.endsWith('/') ? sm.prefix : sm.prefix + '/'
   const cleanUsername = sm.username.startsWith('/') ? sm.username.substring(1) : sm.username
+
   return cleanPrefix + cleanUsername
 }
 
@@ -188,31 +192,46 @@ const iconsMap = {
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return null
+  if (!dateStr) {
+return null
+}
+
   try {
     return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(dateStr))
-  } catch (e) { return dateStr }
+  } catch (e) {
+ return dateStr 
+}
 }
 
 const age = computed(() => {
-  if (!details.value?.profile?.birth_date) return null
+  if (!details.value?.profile?.birth_date) {
+return null
+}
+
   const birth = new Date(details.value.profile.birth_date)
   const isAlive = details.value.profile.is_alive
   const end = isAlive ? new Date() : (details.value.profile.death_date ? new Date(details.value.profile.death_date) : new Date())
   let age = end.getFullYear() - birth.getFullYear()
   const m = end.getMonth() - birth.getMonth()
-  if (m < 0 || (m === 0 && end.getDate() < birth.getDate())) age--
+
+  if (m < 0 || (m === 0 && end.getDate() < birth.getDate())) {
+age--
+}
+
   return age
 })
 
 const bannerColor = computed(() => {
   const colors = ['from-emerald-400 to-teal-500', 'from-pink-400 to-rose-500', 'from-emerald-400 to-teal-500', 'from-amber-400 to-orange-500']
+
   return colors[props.node.id % colors.length]
 })
 
 function fetchDetails() {
   http.get(`/api/users/${props.node.id}/details?from_id=${page.props.auth.user?.id}`, {
-    onSuccess: (data) => { details.value = data }
+    onSuccess: (data) => {
+ details.value = data 
+}
   })
 }
 
@@ -223,6 +242,7 @@ function handleToggleAdmin() {
 function handleToggleFamilyHead() {
   const isHead = details.value.profile?.is_family_head
   const action = isHead ? 'Mencabut status' : 'Menjadikan'
+
   if (confirm(`${action} Kepala Keluarga untuk ${details.value.full_name}?`)) {
     router.post(`/api/users/${props.node.id}/toggle-head`, {}, { onSuccess: () => fetchDetails() })
   }
@@ -234,7 +254,9 @@ function deleteMember() {
   }
 }
 
-watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, { immediate: true })
+watch(() => props.node.id, () => {
+ fetchDetails(); activeTab.value = 'info' 
+}, { immediate: true })
 </script>
 
 <template>
@@ -267,10 +289,10 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
 
     <!-- Tabs Navigation -->
     <div class="px-6 flex border-b bg-gray-50/50">
-      <button v-for="tab in ['info', 'berkas', 'settings']" :key="tab" @click="activeTab = tab"
+      <button v-for="tab in ['info', 'settings']" :key="tab" @click="activeTab = tab"
         :class="['px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2', 
           activeTab === tab ? 'border-emerald-600 text-emerald-600 bg-white' : 'border-transparent text-gray-400 hover:text-gray-600']">
-        {{ tab === 'info' ? 'Biodata' : (tab === 'berkas' ? 'Berkas' : 'Kelola') }}
+        {{ tab === 'info' ? 'Biodata' : 'Kelola' }}
       </button>
     </div>
 
@@ -285,6 +307,10 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
         
         <!-- Tab: Info -->
         <div v-if="activeTab === 'info'" class="space-y-10">
+          <button @click="$emit('open-article', details)" class="w-full py-4 bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-xl flex items-center justify-center gap-3 group">
+            <Maximize2 class="w-4 h-4 group-hover:scale-110 transition-transform" /> Buka Profil Lengkap
+          </button>
+
           <!-- Vital Stats -->
           <div class="grid grid-cols-2 gap-4">
             <div class="bg-gray-50 p-5 rounded-3xl space-y-1 border border-gray-100/50">
@@ -318,15 +344,23 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
                   <div 
                     v-if="details.profile.birth_place" 
                     @click="openMap(`Tempat Lahir ${details.full_name}`, details.profile.birth_place)"
-                    class="text-[10px] font-bold text-gray-400 mt-0.5 flex items-center gap-1 cursor-pointer hover:text-emerald-600 transition-colors"
+                    class="text-[10px] font-bold text-gray-400 mt-0.5 space-y-1 cursor-pointer hover:text-emerald-600 transition-colors"
                   >
-                    <MapPin class="w-3 h-3" /> 
-                    <span>
-                      <template v-if="typeof details.profile.birth_place === 'object'">
-                        {{ details.profile.birth_place.city || details.profile.birth_place.country || 'Lihat Peta' }}
-                      </template>
-                      <template v-else>{{ details.profile.birth_place }}</template>
-                    </span>
+                    <div class="flex items-center gap-1">
+                      <MapPin class="w-3 h-3" /> 
+                      <span>
+                        <template v-if="typeof details.profile.birth_place === 'object'">
+                          {{ details.profile.birth_place.address || details.profile.birth_place.city || details.profile.birth_place.country || 'Lihat Peta' }}
+                        </template>
+                        <template v-else>{{ details.profile.birth_place }}</template>
+                      </span>
+                    </div>
+                    <div v-if="typeof details.profile.birth_place === 'object' && (details.profile.birth_place.province || details.profile.birth_place.city)" class="pl-4 text-[9px] opacity-70">
+                      {{ details.profile.birth_place.city }}{{ details.profile.birth_place.province ? ', ' + details.profile.birth_place.province : '' }}
+                    </div>
+                    <div v-if="typeof details.profile.birth_place === 'object' && details.profile.birth_place.lat" class="pl-4 text-[8px] opacity-50 font-mono">
+                      {{ Number(details.profile.birth_place.lat).toFixed(4) }}, {{ Number(details.profile.birth_place.lng).toFixed(4) }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -338,15 +372,23 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
                   <div 
                     v-if="details.profile.death_place" 
                     @click="openMap(`Tempat Wafat ${details.full_name}`, details.profile.death_place)"
-                    class="text-[10px] font-bold text-gray-400 mt-0.5 flex items-center gap-1 cursor-pointer hover:text-slate-800 transition-colors"
+                    class="text-[10px] font-bold text-gray-400 mt-0.5 space-y-1 cursor-pointer hover:text-slate-800 transition-colors"
                   >
-                    <MapPin class="w-3 h-3" /> 
-                    <span>
-                      <template v-if="typeof details.profile.death_place === 'object'">
-                        {{ details.profile.death_place.city || details.profile.death_place.country || 'Lihat Peta' }}
-                      </template>
-                      <template v-else>{{ details.profile.death_place }}</template>
-                    </span>
+                    <div class="flex items-center gap-1">
+                      <MapPin class="w-3 h-3" /> 
+                      <span>
+                        <template v-if="typeof details.profile.death_place === 'object'">
+                          {{ details.profile.death_place.address || details.profile.death_place.city || details.profile.death_place.country || 'Lihat Peta' }}
+                        </template>
+                        <template v-else>{{ details.profile.death_place }}</template>
+                      </span>
+                    </div>
+                    <div v-if="typeof details.profile.death_place === 'object' && (details.profile.death_place.province || details.profile.death_place.city)" class="pl-4 text-[9px] opacity-70">
+                      {{ details.profile.death_place.city }}{{ details.profile.death_place.province ? ', ' + details.profile.death_place.province : '' }}
+                    </div>
+                    <div v-if="typeof details.profile.death_place === 'object' && details.profile.death_place.lat" class="pl-4 text-[8px] opacity-50 font-mono">
+                      {{ Number(details.profile.death_place.lat).toFixed(4) }}, {{ Number(details.profile.death_place.lng).toFixed(4) }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -402,7 +444,7 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
           </div>
 
           <!-- Direct Relations (Line Details) -->
-          <div class="space-y-6 pt-4 border-t border-dashed">
+          <div class="space-y-6 pt-4 border-t border-dashed pb-8">
             <div class="flex items-center gap-2 px-1 text-emerald-600">
               <Share2 class="w-4 h-4 rotate-90" />
               <span class="text-[10px] font-black uppercase tracking-widest">Garis Keturunan Langsung</span>
@@ -443,225 +485,94 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
             </div>
           </div>
 
-          <!-- Focus / Navigation Actions -->
-          <div class="space-y-4 pt-4 border-t border-dashed">
-            <div class="flex items-center gap-2 px-1 text-blue-600">
-              <Maximize2 class="w-4 h-4" />
-              <span class="text-[10px] font-black uppercase tracking-widest">Navigasi Silsilah</span>
-            </div>
-            
-            <div class="grid gap-2 px-1">
-              <Link :href="'/family-tree/' + node.id" 
-                class="w-full py-4 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg flex items-center justify-center gap-3">
-                <Focus class="w-4 h-4" /> Lihat Cabang Ini (Fokus)
-              </Link>
-              
-              <Link v-if="node.id !== rootId" href="/family-tree" 
-                class="w-full py-3 bg-white text-gray-400 hover:text-gray-900 border-2 border-transparent hover:border-gray-100 rounded-2xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-3">
-                <ArrowUpCircle class="w-4 h-4 rotate-180" /> Kembali ke Root
-              </Link>
-            </div>
+          <!-- Form: Send Letter (If viewer is parent) -->
+          <div v-if="details.can.write_note" class="space-y-6 pt-4 border-t border-dashed pb-8 px-1">
+            <button 
+              @click="isComposeOpen = true"
+              class="w-full p-6 bg-amber-50 border-2 border-amber-100 rounded-[2rem] flex items-center justify-between group hover:bg-white hover:border-amber-400 transition-all shadow-sm"
+            >
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-amber-500 shadow-sm group-hover:bg-amber-500 group-hover:text-white transition-all">
+                  <Mail class="w-6 h-6" />
+                </div>
+                <div class="text-left">
+                  <p class="text-xs font-black text-slate-900 uppercase">Tulis Surat Keluarga</p>
+                  <p class="text-[9px] font-bold text-amber-600 uppercase">Kirim pesan formal & privat</p>
+                </div>
+              </div>
+              <PlusCircle class="w-4 h-4 text-amber-200 group-hover:text-amber-500 transition-colors" />
+            </button>
           </div>
         </div>
 
-        <!-- Tab: Berkas (Documents & History) -->
-        <div v-if="activeTab === 'berkas'" class="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500 pb-12">
-          
-          <!-- Identity Documents (KK/KTP) -->
-          <div class="space-y-6">
-            <div class="flex items-center justify-between px-1">
-              <div class="flex items-center gap-2 text-blue-600">
-                <FileText class="w-4 h-4" />
-                <span class="text-[10px] font-black uppercase tracking-widest">Dokumen Identitas</span>
-              </div>
-              <p v-if="!canUploadIdentity" class="text-[8px] font-bold text-gray-400 uppercase">Hanya Pemilik & Anak</p>
-            </div>
-
-            <div class="grid grid-cols-1 gap-4">
-              <!-- KK Document -->
-              <div class="bg-gray-50 p-5 rounded-[2rem] border border-gray-100 flex items-center justify-between group">
-                <div class="flex items-center gap-4">
-                  <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-blue-500 shadow-sm"><FileText class="w-6 h-6" /></div>
-                  <div>
-                    <p class="text-xs font-black text-gray-900 uppercase">Kartu Keluarga (KK)</p>
-                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">
-                      {{ details.attachments.identity.find(a => a.type === 'kk') ? 'Dokumen Tersedia' : 'Belum Diunggah' }}
-                    </p>
-                  </div>
-                </div>
-                <div class="flex items-center gap-2">
-                  <a v-if="details.attachments.identity.find(a => a.type === 'kk')" 
-                    :href="'/storage/' + details.attachments.identity.find(a => a.type === 'kk').file_path" 
-                    target="_blank"
-                    class="p-2 bg-blue-100 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all">
-                    <Eye class="w-4 h-4" />
-                  </a>
-                  <button v-if="canUploadIdentity" @click="handleIdentityUpload('kk')" :disabled="identityForm.processing"
-                    class="p-2 bg-white border border-gray-200 text-gray-400 rounded-xl hover:border-blue-600 hover:text-blue-600 transition-all">
-                    <UploadCloud class="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <!-- KTP Document -->
-              <div class="bg-gray-50 p-5 rounded-[2rem] border border-gray-100 flex items-center justify-between group">
-                <div class="flex items-center gap-4">
-                  <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-blue-500 shadow-sm"><FileText class="w-6 h-6" /></div>
-                  <div>
-                    <p class="text-xs font-black text-gray-900 uppercase">KTP / Identitas</p>
-                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">
-                      {{ details.attachments.identity.find(a => a.type === 'ktp') ? 'Dokumen Tersedia' : 'Belum Diunggah' }}
-                    </p>
-                  </div>
-                </div>
-                <div class="flex items-center gap-2">
-                  <a v-if="details.attachments.identity.find(a => a.type === 'ktp')" 
-                    :href="'/storage/' + details.attachments.identity.find(a => a.type === 'ktp').file_path" 
-                    target="_blank"
-                    class="p-2 bg-blue-100 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all">
-                    <Eye class="w-4 h-4" />
-                  </a>
-                  <button v-if="canUploadIdentity" @click="handleIdentityUpload('ktp')" :disabled="identityForm.processing"
-                    class="p-2 bg-white border border-gray-200 text-gray-400 rounded-xl hover:border-blue-600 hover:text-blue-600 transition-all">
-                    <UploadCloud class="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Private Notes Section (Point 9) -->
-          <div class="space-y-6 pt-4 border-t border-dashed">
-            <div class="flex items-center gap-2 px-1 text-amber-600">
-              <Mail class="w-4 h-4" />
-              <span class="text-[10px] font-black uppercase tracking-widest">Catatan Privat</span>
-            </div>
-
-            <!-- Form: Send Note (If viewer is parent) -->
-            <div v-if="details.can.write_note" class="bg-amber-50 p-6 rounded-[2rem] border border-amber-100 space-y-4">
-              <p class="text-[9px] font-black text-amber-600 uppercase tracking-widest">Kirim Catatan untuk {{ details.full_name }}</p>
-              <textarea v-model="noteForm.content" 
-                class="w-full bg-white rounded-2xl p-4 text-xs font-bold text-gray-700 border-none outline-none shadow-sm min-h-[100px] resize-none"
-                placeholder="Tulis pesan rahasia atau catatan penting..."></textarea>
-              <button @click="handleNoteSubmit" :disabled="noteForm.processing || !noteForm.content.trim()"
-                class="w-full py-3 bg-amber-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-lg disabled:opacity-50">
-                Kirim Catatan
-              </button>
-            </div>
-
-            <!-- List: My Notes (If viewing self) -->
-            <div v-if="isOwnAccount" class="space-y-4">
-               <div v-if="details.attachments.notes.length === 0" class="py-8 text-center border-2 border-dashed border-gray-100 rounded-[2rem]">
-                  <p class="text-[10px] text-gray-400 font-black uppercase tracking-widest italic leading-loose px-8">Belum ada catatan dari orang tua.</p>
-               </div>
-               
-               <div v-for="note in details.attachments.notes" :key="note.id" class="bg-white border-2 border-amber-50 p-5 rounded-3xl shadow-sm relative group">
-                  <div class="flex items-center gap-3 mb-3">
-                    <div class="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 font-black text-[10px] uppercase">
-                      {{ note.metadata?.sender_name?.charAt(0) || 'O' }}
-                    </div>
-                    <div>
-                      <p class="text-[9px] font-black text-gray-900 uppercase">Dari: {{ note.metadata?.sender_name || 'Orang Tua' }}</p>
-                      <p class="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">{{ formatDate(note.created_at) }}</p>
-                    </div>
-                  </div>
-                  <p class="text-xs font-bold text-gray-700 leading-relaxed italic border-l-4 border-amber-200 pl-4 bg-amber-50/30 py-2 rounded-r-xl">
-                    "{{ note.content }}"
-                  </p>
-               </div>
-            </div>
-          </div>
-
-          <!-- Profile Photo History -->
-          <div class="space-y-6">
-            <div class="flex items-center gap-2 px-1 text-emerald-600">
-              <History class="w-4 h-4" />
-              <span class="text-[10px] font-black uppercase tracking-widest">Histori Foto Profil</span>
-            </div>
-
-            <div v-if="details.attachments.history.length === 0" class="py-12 text-center border-2 border-dashed border-gray-100 rounded-[2rem]">
-              <p class="text-[10px] text-gray-400 font-black uppercase tracking-widest italic px-12 leading-loose">Belum ada riwayat perubahan foto profil.</p>
-            </div>
-
-            <div v-else class="grid grid-cols-2 gap-4">
-              <div v-for="h in details.attachments.history" :key="h.id" class="relative group">
-                <div class="aspect-square rounded-3xl overflow-hidden border-4 border-gray-50 shadow-sm bg-gray-100">
-                  <img :src="'/storage/' + h.file_path" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                </div>
-                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-3xl">
-                   <a :href="'/storage/' + h.file_path" target="_blank" class="p-3 bg-white text-black rounded-2xl shadow-xl hover:scale-110 transition-all">
-                     <Eye class="w-5 h-5" />
-                   </a>
-                </div>
-                <p class="mt-2 text-[8px] font-black text-gray-400 uppercase tracking-widest text-center">
-                  {{ formatDate(h.created_at) }}
-                </p>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Tab: Settings -->
-        <div v-if="activeTab === 'settings'" class="space-y-8 pb-12">
+        <!-- Tab: Settings (Kelola) -->
+        <div v-if="activeTab === 'settings'" class="space-y-10 pb-12">
           
           <!-- Hierarchical Actions -->
-          <div v-if="canManage" class="space-y-4 animate-in slide-in-from-top-4 duration-500">
-            <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] px-1">Koneksi Silsilah</h3>
-            <div class="grid gap-3">
-              <button @click="$emit('add-relation', { node, type: 'parent' })" class="w-full p-5 bg-white border-2 border-gray-50 rounded-[2rem] flex items-center justify-between hover:border-emerald-600 hover:shadow-xl transition-all group">
-                <div class="flex items-center gap-4">
-                  <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform"><ArrowUpCircle class="w-5 h-5" /></div>
+          <div v-if="canManage" class="space-y-6 animate-in slide-in-from-top-4 duration-500">
+            <div class="flex items-center gap-2 px-1 text-gray-400">
+              <PlusCircle class="w-3.5 h-3.5" />
+              <span class="text-[9px] font-black uppercase tracking-widest">Tambah Hubungan</span>
+            </div>
+            
+            <div class="grid grid-cols-1 gap-3">
+              <button @click="$emit('add-relation', { node, type: 'parent' })" class="group flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-2xl hover:border-emerald-500 hover:bg-white transition-all">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-emerald-600 shadow-sm group-hover:bg-emerald-600 group-hover:text-white transition-all"><ArrowUpCircle class="w-5 h-5" /></div>
                   <div class="text-left">
-                    <p class="text-xs font-black text-gray-900 uppercase">Tambah Orang Tua</p>
-                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Ayah atau Ibu</p>
+                    <p class="text-xs font-black text-gray-900 uppercase">Orang Tua</p>
+                    <p class="text-[8px] font-bold text-gray-400 uppercase">Ayah atau Ibu</p>
                   </div>
                 </div>
-                <PlusCircle class="w-4 h-4 text-gray-200 group-hover:text-emerald-600 transition-colors" />
+                <Plus class="w-3 h-3 text-gray-300 group-hover:text-emerald-500" />
               </button>
 
-              <button @click="$emit('add-relation', { node, type: 'spouse' })" class="w-full p-5 bg-white border-2 border-gray-50 rounded-[2rem] flex items-center justify-between hover:border-rose-500 hover:shadow-xl transition-all group">
-                <div class="flex items-center gap-4">
-                  <div class="w-10 h-10 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center group-hover:scale-110 transition-transform"><Heart class="w-5 h-5" /></div>
+              <button @click="$emit('add-relation', { node, type: 'spouse' })" class="group flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-2xl hover:border-rose-500 hover:bg-white transition-all">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-rose-500 shadow-sm group-hover:bg-rose-500 group-hover:text-white transition-all"><Heart class="w-5 h-5" /></div>
                   <div class="text-left">
-                    <p class="text-xs font-black text-gray-900 uppercase">Tambah Pasangan</p>
-                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Suami atau Istri</p>
+                    <p class="text-xs font-black text-gray-900 uppercase">Pasangan</p>
+                    <p class="text-[8px] font-bold text-gray-400 uppercase">Suami atau Istri</p>
                   </div>
                 </div>
-                <PlusCircle class="w-4 h-4 text-gray-200 group-hover:text-rose-500 transition-colors" />
+                <Plus class="w-3 h-3 text-gray-300 group-hover:text-rose-500" />
               </button>
 
-              <button @click="$emit('add-relation', { node, type: 'child' })" class="w-full p-5 bg-white border-2 border-gray-50 rounded-[2rem] flex items-center justify-between hover:border-emerald-500 hover:shadow-xl transition-all group">
-                <div class="flex items-center gap-4">
-                  <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform"><UserPlus class="w-5 h-5" /></div>
+              <button @click="$emit('add-relation', { node, type: 'child' })" class="group flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-2xl hover:border-blue-500 hover:bg-white transition-all">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-blue-500 shadow-sm group-hover:bg-blue-500 group-hover:text-white transition-all"><UserPlus class="w-5 h-5" /></div>
                   <div class="text-left">
-                    <p class="text-xs font-black text-gray-900 uppercase">Tambah Anak</p>
-                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Putra atau Putri</p>
+                    <p class="text-xs font-black text-gray-900 uppercase">Anak</p>
+                    <p class="text-[8px] font-bold text-gray-400 uppercase">Putra atau Putri</p>
                   </div>
                 </div>
-                <PlusCircle class="w-4 h-4 text-gray-200 group-hover:text-emerald-500 transition-colors" />
+                <Plus class="w-3 h-3 text-gray-300 group-hover:text-blue-500" />
               </button>
             </div>
           </div>
 
           <!-- Administrative Controls -->
-          <div class="space-y-4 pt-4 border-t border-dashed">
-            <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] px-1">Kontrol Keanggotaan</h3>
-            <div class="grid gap-3">
-              <button @click="$emit('edit-profile', details)" v-if="canManage" class="w-full py-4 bg-gray-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg flex items-center justify-center gap-3">
+          <div class="space-y-6 pt-6 border-t border-dashed">
+            <div class="flex items-center gap-2 px-1 text-gray-400">
+              <Settings class="w-3.5 h-3.5" />
+              <span class="text-[9px] font-black uppercase tracking-widest">Opsi Lanjutan</span>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3">
+              <button @click="$emit('edit-profile', details)" v-if="canManage" class="flex items-center gap-3 p-4 bg-gray-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg">
                 <PenLine class="w-4 h-4" /> Edit Profil Anggota
               </button>
               
-              <button v-if="canToggleAdmin && !isOwnAccount && !details.is_admin" @click="handleToggleAdmin" :class="['w-full py-3 rounded-2xl text-[10px] font-black uppercase transition-all shadow-lg', details.is_admin ? 'bg-white text-red-600 border-2 border-red-50 hover:bg-red-50' : 'bg-emerald-600 text-white hover:bg-emerald-700']">
-                {{ details.is_admin ? 'Cabut Akses Admin' : 'Jadikan Admin' }}
+              <button v-if="canToggleAdmin && !isOwnAccount && !details.is_admin" @click="handleToggleAdmin" class="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-2xl text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:border-emerald-600 transition-all">
+                <Shield class="w-4 h-4" /> Jadikan Admin
               </button>
 
-              <button v-if="canSetHead" @click="handleToggleFamilyHead" :class="['w-full py-3 rounded-2xl text-[10px] font-black uppercase transition-all shadow-lg', details.profile?.is_family_head ? 'bg-white text-amber-600 border-2 border-amber-50 hover:bg-amber-50' : 'bg-amber-500 text-white hover:bg-amber-600']">
-                <Crown class="w-4 h-4 mr-2 inline-block" />
+              <button v-if="canSetHead" @click="handleToggleFamilyHead" :class="['flex items-center gap-3 p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all', details.profile?.is_family_head ? 'bg-amber-50 text-amber-600 border border-amber-200' : 'bg-white border border-gray-200 text-amber-600 hover:border-amber-600']">
+                <Crown class="w-4 h-4" />
                 {{ details.profile?.is_family_head ? 'Cabut Kepala Keluarga' : 'Jadikan Kepala Keluarga' }}
               </button>
 
-              <button v-if="canDelete" @click="deleteMember" class="w-full py-3 bg-white text-gray-400 hover:text-red-600 border-2 border-transparent hover:border-red-100 rounded-2xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-3">
+              <button v-if="canDelete" @click="deleteMember" class="flex items-center gap-3 p-4 bg-white text-gray-400 hover:text-red-600 border border-gray-200 hover:border-red-100 rounded-2xl text-[10px] font-black uppercase transition-all">
                 <Trash2 class="w-4 h-4" /> Hapus dari Silsilah
               </button>
             </div>
@@ -680,6 +591,13 @@ watch(() => props.node.id, () => { fetchDetails(); activeTab.value = 'info' }, {
       @update:open="isMapOpen = $event" 
       :title="mapTitle" 
       :location-data="mapData" 
+    />
+
+    <ComposeLetterModal 
+      v-if="details"
+      :open="isComposeOpen" 
+      :recipient="details" 
+      @close="isComposeOpen = false; fetchDetails()" 
     />
   </div>
 </template>

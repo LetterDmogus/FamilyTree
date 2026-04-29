@@ -1,11 +1,15 @@
 <?php
 
+use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\DataDetailController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SocialMediaController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Auth\OtpLoginController;
+use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FamilyEventController;
 use App\Http\Controllers\FamilyTreeController;
 use App\Http\Controllers\MasterDataController;
 use Illuminate\Support\Facades\Route;
@@ -14,6 +18,13 @@ use Laravel\Fortify\Features;
 Route::inertia('/', 'Welcome', [
     'canRegister' => Features::enabled(Features::registration()),
 ])->name('home');
+
+// Auth Routes (Socialite & OTP)
+Route::get('auth/google', [SocialiteController::class, 'redirect'])->name('auth.google');
+Route::get('auth/google/callback', [SocialiteController::class, 'callback'])->name('auth.google.callback');
+
+Route::post('login/otp/send', [OtpLoginController::class, 'sendCode'])->name('login.otp.send');
+Route::post('login/otp/verify', [OtpLoginController::class, 'verifyCode'])->name('login.otp.verify');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
@@ -59,8 +70,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('admin/settings/wise-tree', [SettingController::class, 'index'])->name('admin.settings.wise-tree.index');
         Route::put('admin/settings/wise-tree', [SettingController::class, 'update'])->name('admin.settings.wise-tree.update');
         Route::get('admin/settings/backup', [SettingController::class, 'downloadBackup'])->name('admin.settings.backup');
-        
-        Route::get('admin/logs', [\App\Http\Controllers\Admin\ActivityLogController::class, 'index'])->name('admin.logs.index');
+
+        Route::get('admin/logs', [ActivityLogController::class, 'index'])->name('admin.logs.index');
     });
 
     Route::get('/tree/{user?}', [FamilyTreeController::class, 'show'])->name('tree.show');
@@ -72,14 +83,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/api/master-data/additional-fields/{additionalField}', [MasterDataController::class, 'destroyAdditionalField'])->name('master-data.additional-fields.destroy');
 
     Route::get('/api/users/search', [FamilyTreeController::class, 'search'])->name('users.search');
+    Route::get('/api/locations', [FamilyTreeController::class, 'locations'])->name('locations.index');
     Route::get('/api/users/{user}/details', [FamilyTreeController::class, 'details'])->name('users.details');
+    Route::get('/api/family-tree/mockup-kk', [FamilyTreeController::class, 'downloadMockupKk'])->name('family-tree.mockup-kk');
+    Route::post('/api/users/{user}/extract-kk', [FamilyTreeController::class, 'extractKkExcel'])->name('users.extract-kk');
     Route::post('/api/users/{user}/update', [FamilyTreeController::class, 'updateProfile'])->name('users.update');
     Route::delete('/api/users/{user}', [FamilyTreeController::class, 'destroyMember'])->name('users.destroy');
     Route::post('/api/relations', [FamilyTreeController::class, 'storeRelation'])->name('relations.store');
     Route::post('/api/users/{user}/toggle-admin', [FamilyTreeController::class, 'toggleAdmin'])->name('users.toggle-admin');
     Route::post('/api/users/{user}/toggle-head', [FamilyTreeController::class, 'toggleFamilyHead'])->name('users.toggle-head');
     Route::post('/api/users/{user}/upload-identity', [FamilyTreeController::class, 'uploadIdentity'])->name('users.upload-identity');
-    Route::post('/api/users/{user}/note', [FamilyTreeController::class, 'storeNote'])->name('users.store-note');
+    Route::post('/api/users/{user}/letter', [FamilyTreeController::class, 'storeLetter'])->name('users.store-letter');
+    Route::post('/api/letters/{letter}/read', [FamilyTreeController::class, 'markLetterAsRead'])->name('letters.mark-read');
+
+    Route::get('family-events', [FamilyEventController::class, 'index'])->name('family-events.index');
+    Route::post('family-events', [FamilyEventController::class, 'store'])->name('family-events.store');
+    Route::get('family-events/{event}', [FamilyEventController::class, 'show'])->name('family-events.show');
+    Route::put('family-events/{event}', [FamilyEventController::class, 'update'])->name('family-events.update');
+    Route::delete('family-events/{event}', [FamilyEventController::class, 'destroy'])->name('family-events.destroy');
+    Route::post('family-events/{event}/rsvp', [FamilyEventController::class, 'rsvp'])->name('family-events.rsvp');
 });
 
 require __DIR__.'/settings.php';

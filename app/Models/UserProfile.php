@@ -17,10 +17,12 @@ class UserProfile extends Model
         'birth_date',
         'birth_place',
         'death_place',
+        'current_address',
         'is_family_head',
         'additional_info',
         'social_media',
         'profile_photo_path',
+        'profile_photo_updated_at',
     ];
 
     protected $casts = [
@@ -29,9 +31,11 @@ class UserProfile extends Model
         'birth_date' => 'date',
         'birth_place' => 'array',
         'death_place' => 'array',
+        'current_address' => 'array',
         'is_family_head' => 'boolean',
         'additional_info' => 'array',
         'social_media' => 'array',
+        'profile_photo_updated_at' => 'datetime',
     ];
 
     protected $appends = ['photo_url'];

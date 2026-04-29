@@ -14,14 +14,13 @@ return new class extends Migration
         Schema::create('user_attachments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('category'); // identity, history, note
-            $table->string('type');     // kk, ktp, profile_photo, text
-            $table->string('file_path')->nullable();
-            $table->text('content')->nullable(); // For notes or extra metadata
-            $table->boolean('is_private')->default(true);
+            $table->string('category'); // identity, history, gallery
+            $table->string('type');     // kk, ktp, profile_photo, image, pdf
+            $table->string('file_path');
+            $table->string('label')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();
-            
+
             $table->index(['user_id', 'category']);
         });
     }

@@ -19,8 +19,6 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class,
             SettingSeeder::class,
             MasterDataSeeder::class,
-            FamilyTreeSeeder::class,
-            UserRoleAssignmentSeeder::class,
         ]);
     }
 }

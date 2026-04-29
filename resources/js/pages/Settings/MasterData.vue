@@ -1,6 +1,6 @@
 <script setup>
-import { ref, onMounted } from 'vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
+import { ref, onMounted } from 'vue'
 
 const props = defineProps({
   socialMedias: Array,
@@ -12,6 +12,7 @@ const activeTab = ref('sosmed')
 onMounted(() => {
   const urlParams = new URLSearchParams(window.location.search)
   const tab = urlParams.get('tab')
+
   if (tab && ['sosmed', 'fields'].includes(tab)) {
     activeTab.value = tab
   }

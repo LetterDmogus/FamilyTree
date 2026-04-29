@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
+import { Plus, Shield, CheckCircle2 } from 'lucide-vue-next';
+import { ref } from 'vue';
 import CrudTable from '@/components/CrudTable.vue';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -12,10 +16,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Shield, CheckCircle2 } from 'lucide-vue-next';
-import { ref } from 'vue';
 import admin from '@/routes/admin';
 
 const props = defineProps<{

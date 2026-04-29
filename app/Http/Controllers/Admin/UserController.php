@@ -48,7 +48,7 @@ class UserController extends Controller
                 'update' => auth()->user()->can('update_users'),
                 'delete' => auth()->user()->can('delete_users'),
                 'access_trash' => $canAccessTrash,
-            ]
+            ],
         ]);
     }
 
@@ -101,6 +101,7 @@ class UserController extends Controller
 
         try {
             $user->delete();
+
             return back()->with('success', 'User deleted and tree healed successfully.');
         } catch (\Exception $e) {
             return back()->withErrors(['error' => $e->getMessage()]);
@@ -112,7 +113,7 @@ class UserController extends Controller
         $this->authorize('access_trash_users');
 
         $user = User::withTrashed()->findOrFail($id);
-        
+
         if ($user->hasRole('superadmin')) {
             abort(403);
         }

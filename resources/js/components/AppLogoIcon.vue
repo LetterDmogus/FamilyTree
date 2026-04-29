@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { type HTMLAttributes } from 'vue'
 import { Trees } from 'lucide-vue-next'
+import type {HTMLAttributes} from 'vue';
 import { cn } from '@/lib/utils'
 
 const props = defineProps<{

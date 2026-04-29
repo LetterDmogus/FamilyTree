@@ -1,10 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { Head, useForm } from '@inertiajs/vue3';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { 
     Monitor, 
     Download, 
@@ -24,6 +19,11 @@ import {
     Info,
     MessageSquareQuote
 } from 'lucide-vue-next';
+import { computed } from 'vue';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import admin from '@/routes/admin';
 
 interface SettingValue {
@@ -92,6 +92,7 @@ const getTitle = (key: string) => {
         allow_custom_metadata: 'Metadata Kustom',
         priority_limit: 'Batas Prioritas Data'
     };
+
     return titles[key] || key.replace(/_/g, ' ').toUpperCase();
 };
 </script>

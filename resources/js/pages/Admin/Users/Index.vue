@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import CrudTable from '@/components/CrudTable.vue';
-import admin from '@/routes/admin';
+import { Crown, Heart, Skull, Venus, Mars } from 'lucide-vue-next';
 import { ref } from 'vue';
+import CrudTable from '@/components/CrudTable.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -11,12 +13,10 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Crown, Heart, Skull, Venus, Mars } from 'lucide-vue-next';
+import admin from '@/routes/admin';
 
 const props = defineProps<{
     items: {
@@ -91,8 +91,14 @@ const handleResetPassword = (user: any) => {
 };
 
 function getRoleColor(role: string) {
-    if (role === 'superadmin') return 'bg-rose-600 text-white border-none'
-    if (role === 'admin') return 'bg-emerald-600 text-white border-none'
+    if (role === 'superadmin') {
+return 'bg-rose-600 text-white border-none'
+}
+
+    if (role === 'admin') {
+return 'bg-emerald-600 text-white border-none'
+}
+
     return 'bg-slate-100 text-slate-600 border-none'
 }
 </script>

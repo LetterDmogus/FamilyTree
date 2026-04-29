@@ -33,6 +33,7 @@ class MasterDataController extends Controller
     public function destroySocialMedia(MasterSocialMedia $socialMedia)
     {
         $socialMedia->delete();
+
         return back()->with('success', 'Platform sosial media berhasil dihapus.');
     }
 
@@ -53,6 +54,7 @@ class MasterDataController extends Controller
     public function destroyAdditionalField(MasterAdditionalField $additionalField)
     {
         $additionalField->delete();
+
         return back()->with('success', 'Bidang data tambahan berhasil dihapus.');
     }
 }

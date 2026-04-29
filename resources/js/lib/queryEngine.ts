@@ -32,7 +32,9 @@ export interface QueryOperation {
 }
 
 export function flattenTree(node: FamilyMember, members: Map<number, FamilyMember> = new Map()): FamilyMember[] {
-    if (!node || members.has(node.id)) return [];
+    if (!node || members.has(node.id)) {
+return [];
+}
 
     const member = { ...node };
     members.set(node.id, member);
@@ -72,9 +74,11 @@ function applyFilter(data: FamilyMember[], op: QueryOperation) {
     if (op.field && op.value !== undefined) {
         return data.filter(item => {
             const val = item[op.field as keyof FamilyMember];
+
             if (typeof val === 'string' && typeof op.value === 'string') {
                 return val.toLowerCase().includes(op.value.toLowerCase());
             }
+
             return val === op.value;
         });
     }
@@ -86,6 +90,7 @@ function applyFilter(data: FamilyMember[], op: QueryOperation) {
              // Cucu are usually depth 3 if root is depth 1
              return data.filter(item => item.depth === 3);
         }
+
         if (op.relation === 'anak') {
             return data.filter(item => item.depth === 2);
         }
@@ -95,23 +100,33 @@ function applyFilter(data: FamilyMember[], op: QueryOperation) {
 }
 
 function applySort(data: FamilyMember[], op: QueryOperation) {
-    if (!op.field) return data;
+    if (!op.field) {
+return data;
+}
 
     return [...data].sort((a, b) => {
         const valA = a[op.field as keyof FamilyMember] ?? '';
         const valB = b[op.field as keyof FamilyMember] ?? '';
 
-        if (valA < valB) return op.order === 'desc' ? 1 : -1;
-        if (valA > valB) return op.order === 'desc' ? -1 : 1;
+        if (valA < valB) {
+return op.order === 'desc' ? 1 : -1;
+}
+
+        if (valA > valB) {
+return op.order === 'desc' ? -1 : 1;
+}
+
         return 0;
     });
 }
 
 function applySelect(data: FamilyMember[], op: QueryOperation) {
     let result = data;
+
     if (op.limit) {
         result = result.slice(0, op.limit);
     }
+
     // We keep important fields for AI context
     return result.map(item => ({
         id: item.id,
@@ -128,6 +143,7 @@ function applyAggregate(data: FamilyMember[], op: QueryOperation) {
     if (op.field === 'count') {
         return { count: data.length };
     }
+
     return { result: data.length };
 }
 
@@ -135,7 +151,10 @@ function applyTraverse(root: FamilyMember, op: QueryOperation) {
     // Basic traverse: find node and return its context
     const all = flattenTree(root);
     const target = all.find(m => m.id === op.id);
-    if (!target) return [];
+
+    if (!target) {
+return [];
+}
 
     if (op.type === 'descendants') {
         return flattenTree(target).filter(m => m.id !== target.id);
@@ -153,6 +172,7 @@ function applyTraverse(root: FamilyMember, op: QueryOperation) {
 
 export function getSummary(treeData: FamilyMember) {
     const all = flattenTree(treeData);
+
     return {
         total_members: all.length,
         alive_members: all.filter(m => m.is_alive).length,

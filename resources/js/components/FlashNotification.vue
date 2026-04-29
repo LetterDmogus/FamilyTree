@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { watch, onMounted } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+import { watch, onMounted } from 'vue';
 import { toast } from 'vue-sonner';
 
 const page = usePage();
@@ -19,6 +19,7 @@ const showToasts = () => {
 
     // Handle validation errors from Inertia
     const errorKeys = Object.keys(errors);
+
     if (errorKeys.length > 0) {
         // If it's a specific custom error from the backend (like our 'error' key in withErrors)
         if (errors.error) {

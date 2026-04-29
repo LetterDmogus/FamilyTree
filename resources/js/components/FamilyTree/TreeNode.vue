@@ -4,13 +4,6 @@
  * Improved with Local Initials Avatar and Toggleable Badges.
  * Using latest Lucide Icons (Mars, Venus, etc.)
  */
-import { computed } from 'vue'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 import { 
   Mars, 
   Venus, 
@@ -23,6 +16,13 @@ import {
   MoreHorizontal,
   Mail
 } from 'lucide-vue-next'
+import { computed } from 'vue'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 const props = defineProps({
   node: { type: Object, required: true },
@@ -64,7 +64,10 @@ function prevSpouse() {
 
 // Local Avatar Logic
 const initials = computed(() => {
-  if (!props.node.panggilan) return '?'
+  if (!props.node.panggilan) {
+return '?'
+}
+
   return props.node.panggilan.substring(0, 2).toUpperCase()
 })
 
@@ -76,16 +79,21 @@ const avatarStyle = computed(() => {
     { bg: '#e0e7ff', text: '#4f46e5' },
     { bg: '#fef3c7', text: '#d97706' },
   ]
+
   return colors[props.node.id % colors.length]
 })
 
 const ageInfo = computed(() => {
-  if (!props.node.birth_date) return null
+  if (!props.node.birth_date) {
+return null
+}
+
   const birth = new Date(props.node.birth_date)
   const end = props.node.is_alive ? new Date() : (props.node.death_date ? new Date(props.node.death_date) : new Date())
   
   let age = end.getFullYear() - birth.getFullYear()
   const m = end.getMonth() - birth.getMonth()
+
   if (m < 0 || (m === 0 && end.getDate() < birth.getDate())) {
     age--
   }
@@ -199,10 +207,11 @@ const style = computed(() => ({
       ME
     </div>
 
-    <!-- Note Indicator (BOTTOM RIGHT) -->
-    <div v-if="node.has_note_for_me && !isExportMode" class="absolute -bottom-2 -right-2 w-6 h-6 bg-amber-500 text-white rounded-full border-2 border-white shadow-lg flex items-center justify-center z-30 animate-bounce">
-      <Mail class="w-3 h-3 fill-current" />
+    <!-- Letter Indicator (BOTTOM RIGHT) -->
+    <div v-if="node.has_letter_for_me && !isExportMode" class="absolute -bottom-2 -right-2 w-6 h-6 bg-amber-500 text-white rounded-full border-2 border-white shadow-lg flex items-center justify-center z-30 animate-bounce">
+      <Mail class="w-3 h-3" />
     </div>
+
 
     <!-- More Indicator (BOTTOM) -->
     <div 

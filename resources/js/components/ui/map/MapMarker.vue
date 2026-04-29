@@ -1,57 +1,98 @@
 <script setup lang="ts">
-import { ref, onMounted, shallowRef, computed, inject, Ref, watch } from 'vue'
+import { onMounted, onUnmounted, inject, Ref, watch } from 'vue'
+
+let leafletModule: typeof import('leaflet') | null = null
+
+async function loadLeaflet(): Promise<typeof import('leaflet')> {
+  if (leafletModule) {
+    return leafletModule
+  }
+
+  leafletModule = await import('leaflet')
+  return leafletModule
+}
 
 interface Props {
   lngLat: [number, number]
   color?: string
   draggable?: boolean
+  popup?: string | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
   color: '#3b82f6',
-  draggable: false
+  draggable: false,
+  popup: null
 })
 
 const emit = defineEmits(['dragend'])
-const VMarker = shallowRef<any>(null)
-const isMounted = ref(false)
 
-// Ambil status load peta dari parent (Map.vue)
-const isMapLoaded = inject<Ref<boolean>>('isMapLoaded', ref(false))
+// Inject the map instance provided by Map.vue
+const map = inject<Ref<import('leaflet').Map | null>>('leafletMap')
+const isMapLoaded = inject<Ref<boolean>>('isMapLoaded')
 
-// Guard internal untuk data koordinat
-const safeLngLat = ref<[number, number] | null>(null)
+let marker: import('leaflet').Marker | null = null
 
-const validateAndSet = (val: [number, number]) => {
-    if (Array.isArray(val) && val.length === 2 && 
-        !isNaN(Number(val[0])) && !isNaN(Number(val[1]))) {
-        safeLngLat.value = [Number(val[0]), Number(val[1])]
-    }
+const createMarker = async () => {
+  if (!map?.value || !props.lngLat) return
+
+  const L = await loadLeaflet()
+
+  // Leaflet expects [lat, lng], we swap from our [lng, lat]
+  const latLng: import('leaflet').LatLngExpression = [props.lngLat[1], props.lngLat[0]]
+  
+  marker = L.marker(latLng, {
+    draggable: props.draggable
+  }).addTo(map.value)
+
+  if (props.popup) {
+    marker.bindPopup(props.popup)
+  }
+
+  if (props.draggable) {
+    marker.on('dragend', (e) => {
+      const target = e.target as import('leaflet').Marker
+      const newLatLng = target.getLatLng()
+      // Emit in format compatible with MapLibre event payload
+      emit('dragend', {
+        target: {
+          getLngLat: () => ({
+            lng: newLatLng.lng,
+            lat: newLatLng.lat
+          })
+        }
+      })
+    })
+  }
 }
 
-// Pantau perubahan koordinat secara manual
-watch(() => props.lngLat, (newVal) => {
-    validateAndSet(newVal)
-}, { immediate: true, deep: true })
+onMounted(() => {
+  if (isMapLoaded?.value) {
+    createMarker()
+  }
+})
 
-onMounted(async () => {
-  try {
-    const module = await import('@geoql/v-maplibre')
-    VMarker.value = module.VMarker
-    isMounted.value = true
-  } catch (error) {
-    console.error('Failed to load MapMarker:', error)
+// Wait for map to be loaded before adding marker
+watch(() => isMapLoaded?.value, (loaded) => {
+  if (loaded && !marker) {
+    createMarker()
+  }
+})
+
+// React to coordinate changes
+watch(() => props.lngLat, (newLngLat) => {
+  if (marker && newLngLat) {
+    marker.setLatLng([newLngLat[1], newLngLat[0]])
+  }
+}, { deep: true })
+
+onUnmounted(() => {
+  if (marker) {
+    marker.remove()
   }
 })
 </script>
 
 <template>
-  <component
-    :is="VMarker"
-    v-if="isMounted && VMarker && isMapLoaded && safeLngLat"
-    :lng-lat="safeLngLat"
-    :color="color"
-    :draggable="draggable"
-    @dragend="(e: any) => emit('dragend', e)"
-  />
+  <!-- Marker is managed programmatically via Leaflet API -->
 </template>

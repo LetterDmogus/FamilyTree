@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import { MapPinIcon } from 'lucide-vue-next';
 import { computed } from 'vue';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Map, MapMarker } from '@/components/ui/map';
-import { MapPinIcon } from 'lucide-vue-next';
 
 interface LocationData {
     country?: string;
@@ -21,11 +21,15 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:open']);
 
-// Guard: Ensure valid coordinates for MapLibre
+// Guard: Ensure valid coordinates for the map
 const hasValidCoords = computed(() => {
-    if (!props.locationData) return false;
+    if (!props.locationData) {
+return false;
+}
+
     const lng = Number(props.locationData.lng);
     const lat = Number(props.locationData.lat);
+
     return !isNaN(lng) && !isNaN(lat) && props.locationData.lng !== undefined && props.locationData.lat !== undefined;
 });
 

@@ -1,21 +1,5 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import CrudTable from '@/components/CrudTable.vue';
-import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
 import { 
     Plus, 
     User, 
@@ -30,6 +14,22 @@ import {
     Folder
 } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
+import CrudTable from '@/components/CrudTable.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import admin from '@/routes/admin';
 
 const props = defineProps<{
@@ -106,11 +106,13 @@ const availableGroups = computed(() => {
     groups.add('Cerita & Kenangan');
     groups.add('Pendidikan');
     groups.add('Pekerjaan');
+
     return Array.from(groups).sort();
 });
 
 function addChoice() {
     const val = newOption.value.trim();
+
     if (val && !form.options.choices.includes(val)) {
         form.options.choices = [...form.options.choices, val];
         newOption.value = '';
@@ -152,6 +154,7 @@ const submit = () => {
     const options = {
         onSuccess: () => (showModal.value = false),
     };
+
     if (editingItem.value) {
         const routeDef = admin.dataDetails.update({ dataDetail: editingItem.value.id });
         form.put(typeof routeDef === 'string' ? routeDef : routeDef.url, options);

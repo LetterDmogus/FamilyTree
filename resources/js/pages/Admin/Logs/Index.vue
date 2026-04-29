@@ -1,15 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { Head } from '@inertiajs/vue3';
-import CrudTable from '@/components/CrudTable.vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import { 
     User, 
     Plus, 
@@ -22,6 +12,16 @@ import {
     Activity,
     History
 } from 'lucide-vue-next';
+import { ref } from 'vue';
+import CrudTable from '@/components/CrudTable.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import admin from '@/routes/admin';
 

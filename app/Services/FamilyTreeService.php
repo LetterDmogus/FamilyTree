@@ -2,19 +2,22 @@
 
 namespace App\Services;
 
+use App\Models\FamilyLetter;
 use App\Models\Relation;
 use App\Models\User;
 use App\Models\UserProfile;
-use App\Models\UserAttachment;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 class FamilyTreeService
 {
     protected Collection $allUsers;
+
     protected Collection $allProfiles;
+
     protected Collection $allRelations;
-    protected Collection $myNotes;
+
+    protected Collection $myLetters;
 
     public function __construct(
         protected RelationshipCalculator $calculator
@@ -28,10 +31,10 @@ class FamilyTreeService
             $this->allUsers = User::with('roles')->get();
             $this->allProfiles = UserProfile::all();
             $this->allRelations = Relation::all();
-            
-            // Point 9: Get all notes where the viewing user is the recipient
-            $this->myNotes = UserAttachment::where('user_id', $viewingUser->id)
-                ->where('category', 'note')
+
+            // Get all unread letters where the viewing user is the recipient
+            $this->myLetters = FamilyLetter::where('recipient_id', $viewingUser->id)
+                ->whereNull('read_at')
                 ->get();
 
             return $this->buildNode($rootUser, $viewingUser, 1, $maxDepth, $expandedIds);
@@ -46,8 +49,8 @@ class FamilyTreeService
         $node = [
             'id' => (int) $user->id,
             'panggilan' => $this->calculator->calculate($viewingUser, $user, $this->allRelations),
-            'full_name' => $profile->full_name ?? $user->name,
-            'photo_url' => $profile->photo_url ?? null,
+            'full_name' => ($profile && $profile->full_name) ? $profile->full_name : $user->name,
+            'photo_url' => ($profile && $profile->profile_photo_path) ? '/storage/'.$profile->profile_photo_path : null,
             'gender' => $profile->gender ?? 'M',
             'is_alive' => (bool) ($profile->is_alive ?? true),
             'birth_date' => ($profile && $profile->birth_date) ? $profile->birth_date->format('Y-m-d') : null,
@@ -57,8 +60,8 @@ class FamilyTreeService
             'depth' => $currentDepth,
             'spouse' => [],
             'children' => [],
-            // Check if THIS node (sender) has a note for ME (viewer)
-            'has_note_for_me' => $this->myNotes->contains(fn($n) => ($n->metadata['sender_id'] ?? null) == $user->id)
+            // Check if THIS node (sender) has a letter for ME (viewer)
+            'has_letter_for_me' => $this->myLetters->contains(fn ($l) => $l->sender_id == $user->id && is_null($l->read_at)),
         ];
 
         $spouseRelations = $this->allRelations->where('user_id', $user->id)->where('type', 'spouse');
@@ -68,6 +71,7 @@ class FamilyTreeService
 
         if ($currentDepth >= $effectiveMaxDepth) {
             $node['has_more'] = $spouseRelations->isNotEmpty() || $childRelations->isNotEmpty();
+
             return $node;
         }
 
@@ -75,7 +79,9 @@ class FamilyTreeService
 
         foreach ($spouseRelations as $rel) {
             $spouse = $this->allUsers->find($rel->related_user_id);
-            if (! $spouse) continue;
+            if (! $spouse) {
+                continue;
+            }
 
             $sProfile = $this->allProfiles->where('user_id', $spouse->id)->first();
             $sIsAdmin = $spouse->can('manage_tree_all');
@@ -102,7 +108,7 @@ class FamilyTreeService
                 'id' => (int) $spouse->id,
                 'panggilan' => $this->calculator->calculate($viewingUser, $spouse, $this->allRelations),
                 'full_name' => $sProfile->full_name ?? $spouse->name,
-                'photo_url' => $sProfile->photo_url ?? null,
+                'photo_url' => $sProfile->profile_photo_path ? '/storage/'.$sProfile->profile_photo_path : null,
                 'gender' => $sProfile->gender ?? 'M',
                 'is_alive' => (bool) ($sProfile->is_alive ?? true),
                 'birth_date' => ($sProfile && $sProfile->birth_date) ? $sProfile->birth_date->format('Y-m-d') : null,
@@ -110,7 +116,7 @@ class FamilyTreeService
                 'pekerjaan' => $sProfile->additional_info['pekerjaan'] ?? null,
                 'is_admin' => $sIsAdmin,
                 'children' => $spouseChildren,
-                'has_note_for_me' => $this->myNotes->contains(fn($n) => ($n->metadata['sender_id'] ?? null) == $spouse->id)
+                'has_letter_for_me' => $this->myLetters->contains(fn ($l) => $l->sender_id == $spouse->id && is_null($l->read_at)),
             ];
         }
 

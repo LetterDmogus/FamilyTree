@@ -33,14 +33,14 @@ defineProps<{
             </Link>
 
             <div class="flex flex-col gap-6">
-                <Card class="rounded-xl">
-                    <CardHeader class="px-10 pt-8 pb-0 text-center">
+                <Card class="rounded-xl overflow-hidden">
+                    <CardHeader v-if="title || description" class="px-10 pt-8 pb-0 text-center">
                         <CardTitle class="text-xl">{{ title }}</CardTitle>
                         <CardDescription>
                             {{ description }}
                         </CardDescription>
                     </CardHeader>
-                    <CardContent class="px-10 py-8">
+                    <CardContent :class="['px-10 py-8', !title && !description ? 'pt-10' : '']">
                         <slot />
                     </CardContent>
                 </Card>

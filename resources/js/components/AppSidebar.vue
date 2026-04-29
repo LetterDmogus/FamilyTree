@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BrainCircuit, Clock, Database, LayoutGrid, Network, Share2, ShieldCheck, Users } from 'lucide-vue-next';
+import { BrainCircuit, Calendar, Clock, Database, LayoutGrid, Network, Share2, ShieldCheck, Users } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -15,8 +15,9 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import tree from '@/routes/tree';
 import admin from '@/routes/admin';
+import familyEvents from '@/routes/family-events';
+import tree from '@/routes/tree';
 import type { NavItem } from '@/types';
 
 const page = usePage();
@@ -36,6 +37,12 @@ const mainNavItems = computed<NavItem[]>(() => {
             title: page.props.name as string,
             href: tree.show.url(),
             icon: Network,
+        });
+
+        items.push({
+            title: 'Acara Keluarga',
+            href: familyEvents.index.url(),
+            icon: Calendar,
         });
     }
 

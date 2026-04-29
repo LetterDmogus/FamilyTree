@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from 'vue';
 import { Country, State, City } from 'country-state-city';
-import { Map, MapMarker } from '@/components/ui/map';
-import { Label } from '@/components/ui/label';
+import { ref, watch, onMounted, computed } from 'vue';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Map, MapMarker } from '@/components/ui/map';
 
 const props = defineProps<{
     modelValue: any;
@@ -23,12 +23,15 @@ const localData = ref({
 const countries = ref(Country.getAllCountries());
 const states = ref<any[]>([]);
 const cities = ref<any[]>([]);
+const mapZoom = ref(10);
 
 onMounted(() => {
     if (props.modelValue && typeof props.modelValue === 'object') {
         localData.value = { ...localData.value, ...props.modelValue };
+
         if (localData.value.country) {
             states.value = State.getStatesOfCountry(localData.value.country);
+
             if (localData.value.province) {
                 cities.value = City.getCitiesOfState(localData.value.country, localData.value.province);
             }
@@ -39,9 +42,19 @@ onMounted(() => {
 watch(() => localData.value.country, (newCountry) => {
     if (newCountry) {
         states.value = State.getStatesOfCountry(newCountry);
+        
+        // Auto-center to country
+        const countryData = Country.getCountryByCode(newCountry);
+
+        if (countryData && countryData.latitude && countryData.longitude) {
+            localData.value.lat = Number(countryData.latitude);
+            localData.value.lng = Number(countryData.longitude);
+            mapZoom.value = 5;
+        }
     } else {
         states.value = [];
     }
+
     localData.value.province = '';
     localData.value.city = '';
     updateValue();
@@ -50,10 +63,34 @@ watch(() => localData.value.country, (newCountry) => {
 watch(() => localData.value.province, (newProv) => {
     if (newProv && localData.value.country) {
         cities.value = City.getCitiesOfState(localData.value.country, newProv);
+
+        // Auto-center to province
+        const stateData = State.getStateByCodeAndCountry(newProv, localData.value.country);
+
+        if (stateData && stateData.latitude && stateData.longitude) {
+            localData.value.lat = Number(stateData.latitude);
+            localData.value.lng = Number(stateData.longitude);
+            mapZoom.value = 8;
+        }
     } else {
         cities.value = [];
     }
+
     localData.value.city = '';
+    updateValue();
+});
+
+watch(() => localData.value.city, (newCity) => {
+    if (newCity && cities.value.length > 0) {
+        const cityData = cities.value.find(c => c.name === newCity);
+
+        if (cityData && cityData.latitude && cityData.longitude) {
+            localData.value.lat = Number(cityData.latitude);
+            localData.value.lng = Number(cityData.longitude);
+            mapZoom.value = 12;
+        }
+    }
+
     updateValue();
 });
 
@@ -69,7 +106,7 @@ const updateValue = () => {
     emit('update:modelValue', { ...localData.value });
 };
 
-// Validasi koordinat untuk mencegah error MapLibre
+// Validasi koordinat untuk mencegah error peta
 const mapCenter = computed<[number, number]>(() => [
     Number(localData.value.lng) || 106.816666, 
     Number(localData.value.lat) || -6.200000
@@ -134,7 +171,7 @@ const hasValidCoords = computed(() => {
             <Label class="text-xs text-muted-foreground italic">Klik pada peta untuk menentukan titik koordinat presisi</Label>
             <div class="h-[250px] w-full rounded-md overflow-hidden border bg-muted/5 relative">
                 <Map 
-                    :zoom="10" 
+                    :zoom="mapZoom" 
                     :center="mapCenter" 
                     @click="onMapClick"
                 >

@@ -12,13 +12,13 @@ trait LogsActivity
     protected static function bootLogsActivity()
     {
         static::created(function (Model $model) {
-            self::logAction($model, 'CREATE', "Menambahkan data " . self::getModelName($model));
+            self::logAction($model, 'CREATE', 'Menambahkan data '.self::getModelName($model));
         });
 
         static::updated(function (Model $model) {
             // Only log if something actually changed
             if ($model->wasChanged()) {
-                self::logAction($model, 'UPDATE', "Memperbarui data " . self::getModelName($model), [
+                self::logAction($model, 'UPDATE', 'Memperbarui data '.self::getModelName($model), [
                     'old' => array_intersect_key($model->getOriginal(), $model->getChanges()),
                     'new' => $model->getChanges(),
                 ]);
@@ -26,7 +26,7 @@ trait LogsActivity
         });
 
         static::deleted(function (Model $model) {
-            self::logAction($model, 'DELETE', "Menghapus data " . self::getModelName($model));
+            self::logAction($model, 'DELETE', 'Menghapus data '.self::getModelName($model));
         });
     }
 
@@ -62,7 +62,8 @@ trait LogsActivity
     protected static function getModelName(Model $model): string
     {
         $class = class_basename($model);
-        return match($class) {
+
+        return match ($class) {
             'User' => 'Anggota Keluarga',
             'Relation' => 'Hubungan Silsilah',
             'Setting' => 'Pengaturan Website',

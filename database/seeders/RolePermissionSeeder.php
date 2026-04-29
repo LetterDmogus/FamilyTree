@@ -61,7 +61,7 @@ class RolePermissionSeeder extends Seeder
             'manage_tree_self',
         ]);
 
-        // 5. Ensure Super Admin User exists
+        // 5. Ensure Super Admin User exists with Profile
         $user = User::where('email', 'superadmin@example.com')->first();
         if (! $user) {
             $user = User::factory()->create([
@@ -71,5 +71,15 @@ class RolePermissionSeeder extends Seeder
             ]);
         }
         $user->assignRole($superAdminRole);
+
+        if (! $user->profile) {
+            $user->profile()->create([
+                'full_name' => 'Administrator Utama',
+                'gender' => 'M',
+                'birth_date' => '1990-01-01',
+                'is_alive' => true,
+                'is_family_head' => true,
+            ]);
+        }
     }
 }

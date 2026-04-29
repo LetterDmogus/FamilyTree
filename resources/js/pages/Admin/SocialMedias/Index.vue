@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
+import { Plus, Globe, Sparkles } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
 import CrudTable from '@/components/CrudTable.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,8 +14,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Globe, Sparkles } from 'lucide-vue-next';
-import { ref, computed } from 'vue';
 import admin from '@/routes/admin';
 
 const props = defineProps<{
@@ -83,8 +83,12 @@ function applyPreset(preset: any) {
 
 // Auto-lookup icon based on name
 const autoIconUrl = computed(() => {
-    if (!form.name) return null;
+    if (!form.name) {
+return null;
+}
+
     const slug = form.name.toLowerCase().replace(/ /g, '').replace(/\(twitter\)/g, '');
+
     return `https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/${slug}.svg`;
 });
 

@@ -14,12 +14,12 @@ class UserAttachment extends Model
         'file_path',
         'content',
         'is_private',
-        'metadata'
+        'metadata',
     ];
 
     protected $casts = [
         'is_private' => 'boolean',
-        'metadata' => 'json'
+        'metadata' => 'json',
     ];
 
     public function user(): BelongsTo

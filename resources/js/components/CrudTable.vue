@@ -73,15 +73,23 @@ const trashed = ref(props.filters.trashed || 'active');
 const sort = ref(props.filters.sort || '-created_at');
 const perPage = ref(String(props.filters.per_page || '10'));
 
-watch(() => props.filters.trashed, (newVal) => { trashed.value = newVal || 'active'; });
-watch(() => props.filters.sort, (newVal) => { sort.value = newVal || '-created_at'; });
-watch(() => props.filters.per_page, (newVal) => { perPage.value = String(newVal || '10'); });
+watch(() => props.filters.trashed, (newVal) => {
+ trashed.value = newVal || 'active'; 
+});
+watch(() => props.filters.sort, (newVal) => {
+ sort.value = newVal || '-created_at'; 
+});
+watch(() => props.filters.per_page, (newVal) => {
+ perPage.value = String(newVal || '10'); 
+});
 
 const debouncedSearch = debounce((value: string) => {
     router.get(props.routes.index({ query: { ...props.filters, search: value, page: 1 } }).url, {}, { preserveState: true, replace: true });
 }, 300);
 
-watch(search, (value) => { debouncedSearch(value); });
+watch(search, (value) => {
+ debouncedSearch(value); 
+});
 
 const handleFilterChange = (key: string, value: any) => {
     router.get(props.routes.index({ query: { ...props.filters, [key]: value, page: 1 } }).url, {}, { preserveState: true });
@@ -89,8 +97,13 @@ const handleFilterChange = (key: string, value: any) => {
 
 const handleSort = (key: string) => {
     let newSort = key;
-    if (props.filters.sort === key) newSort = `-${key}`;
-    else if (props.filters.sort === `-${key}`) newSort = '';
+
+    if (props.filters.sort === key) {
+newSort = `-${key}`;
+} else if (props.filters.sort === `-${key}`) {
+newSort = '';
+}
+
     handleFilterChange('sort', newSort);
 };
 

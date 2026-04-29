@@ -1,6 +1,5 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -12,6 +11,7 @@ import {
   Calendar as CalendarIcon,
   ArrowRight
 } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
 
 const props = defineProps({
   stats: Object,
@@ -56,16 +56,28 @@ const daysInMonth = computed(() => {
       events: dayEvents
     })
   }
+
   return days
 })
 
-function prevMonth() { currentDate.value = new Date(currentYear.value, currentMonth.value - 1, 1) }
-function nextMonth() { currentDate.value = new Date(currentYear.value, currentMonth.value + 1, 1) }
+function prevMonth() {
+ currentDate.value = new Date(currentYear.value, currentMonth.value - 1, 1) 
+}
+function nextMonth() {
+ currentDate.value = new Date(currentYear.value, currentMonth.value + 1, 1) 
+}
 
 const welcomeMessage = computed(() => {
   const hour = new Date().getHours()
-  if (hour < 12) return 'Selamat Pagi'
-  if (hour < 17) return 'Selamat Siang'
+
+  if (hour < 12) {
+return 'Selamat Pagi'
+}
+
+  if (hour < 17) {
+return 'Selamat Siang'
+}
+
   return 'Selamat Malam'
 })
 </script>
